@@ -1,0 +1,744 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <meta name="generator" content="Pelican" />
+        <title>C++虚继承对象内存布局</title>
+        <link rel="stylesheet" href="/theme/css/main.css" />
+        <meta name="description" content="1. 前言 2. GCC虚继承对象内存布局 2.1. 内存布局 2.2. 虚函数表 2.2.1. 虚函数指针 2.2.2. Type Info指针 2.2.3. Top Offset 2.2.4. VBase Offset 2.2.5. VCall Offset 2.3 …" />
+
+        <style>
+          /* #content { max-width: 60em; margin: auto; } */
+          .title  { text-align: center;
+                     margin-bottom: .2em; }
+          .subtitle { text-align: center;
+                      font-size: medium;
+                      font-weight: bold;
+                      margin-top:0; }
+          .todo   { font-family: monospace; color: red; }
+          .done   { font-family: monospace; color: green; }
+          .priority { font-family: monospace; color: orange; }
+          .tag    { background-color: #eee; font-family: monospace;
+                    padding: 2px; font-size: 80%; font-weight: normal; }
+          .timestamp { color: #bebebe; }
+          .timestamp-kwd { color: #5f9ea0; }
+          .org-right  { margin-left: auto; margin-right: 0px;  text-align: right; }
+          .org-left   { margin-left: 0px;  margin-right: auto; text-align: left; }
+          .org-center { margin-left: auto; margin-right: auto; text-align: center; }
+          .underline { text-decoration: underline; }
+          #postamble p, #preamble p { font-size: 90%; margin: .2em; }
+          p.verse { margin-left: 3%; }
+          pre {
+            border: 1px solid #e6e6e6;
+            border-radius: 3px;
+            background-color: #f2f2f2;
+            padding: 8pt;
+            font-family: monospace;
+            overflow: auto;
+            margin: 1.2em;
+          }
+          pre.src {
+            position: relative;
+            overflow: auto;
+          }
+          pre.src:before {
+            display: none;
+            position: absolute;
+            top: -8px;
+            right: 12px;
+            padding: 3px;
+            color: #555;
+            background-color: #f2f2f299;
+          }
+          pre.src:hover:before { display: inline; margin-top: 14px;}
+          /* Languages per Org manual */
+          pre.src-asymptote:before { content: 'Asymptote'; }
+          pre.src-awk:before { content: 'Awk'; }
+          pre.src-authinfo::before { content: 'Authinfo'; }
+          pre.src-C:before { content: 'C'; }
+          /* pre.src-C++ doesn't work in CSS */
+          pre.src-clojure:before { content: 'Clojure'; }
+          pre.src-css:before { content: 'CSS'; }
+          pre.src-D:before { content: 'D'; }
+          pre.src-ditaa:before { content: 'ditaa'; }
+          pre.src-dot:before { content: 'Graphviz'; }
+          pre.src-calc:before { content: 'Emacs Calc'; }
+          pre.src-emacs-lisp:before { content: 'Emacs Lisp'; }
+          pre.src-fortran:before { content: 'Fortran'; }
+          pre.src-gnuplot:before { content: 'gnuplot'; }
+          pre.src-haskell:before { content: 'Haskell'; }
+          pre.src-hledger:before { content: 'hledger'; }
+          pre.src-java:before { content: 'Java'; }
+          pre.src-js:before { content: 'Javascript'; }
+          pre.src-latex:before { content: 'LaTeX'; }
+          pre.src-ledger:before { content: 'Ledger'; }
+          pre.src-lisp:before { content: 'Lisp'; }
+          pre.src-lilypond:before { content: 'Lilypond'; }
+          pre.src-lua:before { content: 'Lua'; }
+          pre.src-matlab:before { content: 'MATLAB'; }
+          pre.src-mscgen:before { content: 'Mscgen'; }
+          pre.src-ocaml:before { content: 'Objective Caml'; }
+          pre.src-octave:before { content: 'Octave'; }
+          pre.src-org:before { content: 'Org mode'; }
+          pre.src-oz:before { content: 'OZ'; }
+          pre.src-plantuml:before { content: 'Plantuml'; }
+          pre.src-processing:before { content: 'Processing.js'; }
+          pre.src-python:before { content: 'Python'; }
+          pre.src-R:before { content: 'R'; }
+          pre.src-ruby:before { content: 'Ruby'; }
+          pre.src-sass:before { content: 'Sass'; }
+          pre.src-scheme:before { content: 'Scheme'; }
+          pre.src-screen:before { content: 'Gnu Screen'; }
+          pre.src-sed:before { content: 'Sed'; }
+          pre.src-sh:before { content: 'shell'; }
+          pre.src-sql:before { content: 'SQL'; }
+          pre.src-sqlite:before { content: 'SQLite'; }
+          /* additional languages in org.el's org-babel-load-languages alist */
+          pre.src-forth:before { content: 'Forth'; }
+          pre.src-io:before { content: 'IO'; }
+          pre.src-J:before { content: 'J'; }
+          pre.src-makefile:before { content: 'Makefile'; }
+          pre.src-maxima:before { content: 'Maxima'; }
+          pre.src-perl:before { content: 'Perl'; }
+          pre.src-picolisp:before { content: 'Pico Lisp'; }
+          pre.src-scala:before { content: 'Scala'; }
+          pre.src-shell:before { content: 'Shell Script'; }
+          pre.src-ebnf2ps:before { content: 'ebfn2ps'; }
+          /* additional language identifiers per "defun org-babel-execute"
+               in ob-*.el */
+          pre.src-cpp:before  { content: 'C++'; }
+          pre.src-abc:before  { content: 'ABC'; }
+          pre.src-coq:before  { content: 'Coq'; }
+          pre.src-groovy:before  { content: 'Groovy'; }
+          /* additional language identifiers from org-babel-shell-names in
+             ob-shell.el: ob-shell is the only babel language using a lambda to put
+             the execution function name together. */
+          pre.src-bash:before  { content: 'bash'; }
+          pre.src-csh:before  { content: 'csh'; }
+          pre.src-ash:before  { content: 'ash'; }
+          pre.src-dash:before  { content: 'dash'; }
+          pre.src-ksh:before  { content: 'ksh'; }
+          pre.src-mksh:before  { content: 'mksh'; }
+          pre.src-posh:before  { content: 'posh'; }
+          /* Additional Emacs modes also supported by the LaTeX listings package */
+          pre.src-ada:before { content: 'Ada'; }
+          pre.src-asm:before { content: 'Assembler'; }
+          pre.src-caml:before { content: 'Caml'; }
+          pre.src-delphi:before { content: 'Delphi'; }
+          pre.src-html:before { content: 'HTML'; }
+          pre.src-idl:before { content: 'IDL'; }
+          pre.src-mercury:before { content: 'Mercury'; }
+          pre.src-metapost:before { content: 'MetaPost'; }
+          pre.src-modula-2:before { content: 'Modula-2'; }
+          pre.src-pascal:before { content: 'Pascal'; }
+          pre.src-ps:before { content: 'PostScript'; }
+          pre.src-prolog:before { content: 'Prolog'; }
+          pre.src-simula:before { content: 'Simula'; }
+          pre.src-tcl:before { content: 'tcl'; }
+          pre.src-tex:before { content: 'TeX'; }
+          pre.src-plain-tex:before { content: 'Plain TeX'; }
+          pre.src-verilog:before { content: 'Verilog'; }
+          pre.src-vhdl:before { content: 'VHDL'; }
+          pre.src-xml:before { content: 'XML'; }
+          pre.src-nxml:before { content: 'XML'; }
+          /* add a generic configuration mode; LaTeX export needs an additional
+             (add-to-list 'org-latex-listings-langs '(conf " ")) in .emacs */
+          pre.src-conf:before { content: 'Configuration File'; }
+
+          table { border-collapse:collapse; }
+          caption.t-above { caption-side: top; }
+          caption.t-bottom { caption-side: bottom; }
+          td, th { vertical-align:top;  }
+          th.org-right  { text-align: center;  }
+          th.org-left   { text-align: center;   }
+          th.org-center { text-align: center; }
+          td.org-right  { text-align: right;  }
+          td.org-left   { text-align: left;   }
+          td.org-center { text-align: center; }
+          dt { font-weight: bold; }
+          .footpara { display: inline; }
+          .footdef  { margin-bottom: 1em; }
+          .figure { padding: 1em; }
+          .figure p { text-align: center; }
+          .equation-container {
+            display: table;
+            text-align: center;
+            width: 100%;
+          }
+          .equation {
+            vertical-align: middle;
+          }
+          .equation-label {
+            display: table-cell;
+            text-align: right;
+            vertical-align: middle;
+          }
+          .inlinetask {
+            padding: 10px;
+            border: 2px solid gray;
+            margin: 10px;
+            background: #ffffcc;
+          }
+          #org-div-home-and-up
+           { text-align: right; font-size: 70%; white-space: nowrap; }
+          textarea { overflow-x: auto; }
+          .linenr { font-size: smaller }
+          .code-highlighted { background-color: #ffff00; }
+          .org-info-js_info-navigation { border-style: none; }
+          #org-info-js_console-label
+            { font-size: 10px; font-weight: bold; white-space: nowrap; }
+          .org-info-js_search-highlight
+            { background-color: #ffff00; color: #000000; font-weight: bold; }
+          .org-svg { }
+        </style>
+
+        <script>
+          window.MathJax = {
+            tex: {
+              ams: {
+                multlineWidth: '85%'
+              },
+              tags: 'ams',
+              tagSide: 'right',
+              tagIndent: '.8em'
+            },
+            chtml: {
+              scale: 1.0,
+              displayAlign: 'center',
+              displayIndent: '0em'
+            },
+            svg: {
+              scale: 1.0,
+              displayAlign: 'center',
+              displayIndent: '0em'
+            },
+            output: {
+              font: 'mathjax-modern',
+              displayOverflow: 'overflow'
+            }
+          };
+        </script>
+
+        <script
+          id="MathJax-script"
+          async
+          src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js">
+        </script>
+</head>
+
+<body id="index" class="home">
+        <header id="banner" class="body">
+                <nav><ul>
+                    <li><a href="/">首页</a></li>
+                    <li><a href="/categories.html">分类</a></li>
+                    <li><a href="/tags.html">标签</a></li>
+                    <li><a href="/archives.html">归档</a></li>
+                    <li><a href="https://github.com/azjf">关于</a></li>
+                </ul></nav>
+        </header><!-- /#banner -->
+<section id="content" class="body">
+  <article>
+    <header>
+      <h1 class="entry-title">
+        <a href="/cpp_vtable.html" rel="bookmark"
+           title="Permalink to C++虚继承对象内存布局">C++虚继承对象内存布局</a></h1>
+    </header>
+
+    <div class="entry-content">
+<footer class="post-info">
+        <abbr class="published" title="2024-02-28T00:00:00+08:00">
+                2024-02-28
+        </abbr>
+<p>分类: <a href="/category/c.html">C++</a></p>
+标签: <a href="/tag/c.html">C++</a> <a href="/tag/vtable.html">VTable</a> <a href="/tag/virtual-inheritance.html">Virtual Inheritance</a> <a href="/tag/object-memory-layout.html">Object Memory Layout</a> <a href="/tag/xu-han-shu-biao.html">虚函数表</a> <a href="/tag/xu-ji-cheng.html">虚继承</a> <a href="/tag/dui-xiang-nei-cun-bu-ju.html">对象内存布局</a> 
+</footer><!-- /.post-info -->      <div id="table-of-contents" role="doc-toc">
+
+<div id="text-table-of-contents" role="doc-toc">
+<ul>
+<li><a href="#org58e614d">1. 前言</a></li>
+<li><a href="#orgc7752f3">2. GCC虚继承对象内存布局</a>
+<ul>
+<li><a href="#org7898506">2.1. 内存布局</a></li>
+<li><a href="#org1503e64">2.2. 虚函数表</a>
+<ul>
+<li><a href="#org786bd1f">2.2.1. 虚函数指针</a></li>
+<li><a href="#orgdfacf1b">2.2.2. Type Info指针</a></li>
+<li><a href="#org05b26a1">2.2.3. Top Offset</a></li>
+<li><a href="#orgf0c2381">2.2.4. VBase Offset</a></li>
+<li><a href="#orgddca1e5">2.2.5. VCall Offset</a></li>
+</ul>
+</li>
+<li><a href="#org0d8d88c">2.3. 对象构造/析构与VTT</a>
+<ul>
+<li><a href="#org6362773">2.3.1. CTOR</a></li>
+<li><a href="#org4ccefe6">2.3.2. DTOR</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li><a href="#orgef26a68">3. 总结</a></li>
+<li><a href="#orgfcfa3e7">4. 参考文档</a></li>
+</ul>
+</div>
+</div>
+<div id="outline-container-org58e614d" class="outline-2">
+<h2 id="org58e614d"><span class="section-number-2">1.</span> 前言</h2>
+<div class="outline-text-2" id="text-1">
+<p>
+C++允许多重继承，而多重继承会导致一个基类可能被多个子类从多条路径继承多次，进而导致二义性问题。
+比如，当B1和B2都继承了A，而C又同时继承了B1和B2时，这将导致C的对象内存中具有两份A的子对象（subobject）。
+为了解决这个问题，C++引入了虚继承来确保子类中仅存在一份虚基类对应的subobject。
+</p>
+
+<p>
+为了支持虚继承，含虚基类的C++对象内存布局比不含时复杂了不少。
+C++标准未规定对象内存布局，因此各个编译器的实现也各不相同。
+其中，GCC和Clang采用了<a href="https://itanium-cxx-abi.github.io/cxx-abi/cxx-vtable-ex.html">Itanium ABI</a>标准。
+</p>
+
+<p>
+接下来，本文将通过一个简单的虚继承例子来介绍GCC (12.2.0)所采用的虚继承对象内存布局。
+在下文之前，建议先阅读<a href="https://stackoverflow.com/questions/6258559/what-is-the-vtt-for-a-class">VTable Notes on Multiple Inheritance in GCC C++ Compiler v4.0.1</a>以回顾C++内存布局基础知识。
+</p>
+</div>
+</div>
+<div id="outline-container-orgc7752f3" class="outline-2">
+<h2 id="orgc7752f3"><span class="section-number-2">2.</span> GCC虚继承对象内存布局</h2>
+<div class="outline-text-2" id="text-2">
+<p>
+本文所采用的示例为菱形继承，如下图所示：
+</p>
+
+<div id="orgd9c9be9" class="figure">
+<p><img src="https://github.com/azjf/azjf.github.io/raw/main/img/25/460AEB-C828-4EE1-8310-9C4009AD9EE9/diamond.png" alt="diamond.png" width="500px" />
+</p>
+</div>
+
+<p>
+其代码如下（<a href="https://godbolt.org/z/cTa5crGc4">godbolt</a>）：
+</p>
+<div class="org-src-container">
+<pre class="src src-cpp"><span style="font-weight: bold;">#include</span> <span style="font-style: italic;">&lt;</span><span style="font-style: italic;">typeinfo</span><span style="font-style: italic;">&gt;</span>
+
+<span style="font-weight: bold;">struct</span> <span style="font-weight: bold; text-decoration: underline;">A</span>
+{
+    <span style="font-weight: bold;">virtual</span> <span style="font-weight: bold; text-decoration: underline;">void</span> <span style="font-weight: bold;">f</span>() <span style="font-weight: bold;">const</span> {}
+    <span style="font-weight: bold;">virtual</span> <span style="font-weight: bold; text-decoration: underline;">void</span> <span style="font-weight: bold;">fA</span>() <span style="font-weight: bold;">const</span> {}
+    <span style="font-weight: bold;">virtual</span> ~<span style="font-weight: bold;">A</span>() = <span style="font-weight: bold;">default</span>;
+    <span style="font-weight: bold; text-decoration: underline;">long</span> <span style="font-weight: bold; font-style: italic;">a</span> = 0;
+};
+
+
+<span style="font-weight: bold;">struct</span> <span style="font-weight: bold; text-decoration: underline;">B1</span> : <span style="font-weight: bold;">virtual</span> <span style="font-weight: bold; text-decoration: underline;">A</span>
+{
+    <span style="font-weight: bold;">virtual</span> <span style="font-weight: bold; text-decoration: underline;">void</span> <span style="font-weight: bold;">f</span>() <span style="font-weight: bold;">const</span> <span style="font-weight: bold;">override</span> {}
+    <span style="font-weight: bold;">virtual</span> <span style="font-weight: bold; text-decoration: underline;">void</span> <span style="font-weight: bold;">fB1</span>() <span style="font-weight: bold;">const</span> {}
+    <span style="font-weight: bold; text-decoration: underline;">long</span> <span style="font-weight: bold; font-style: italic;">b1</span> = 0;
+};
+
+
+<span style="font-weight: bold;">struct</span> <span style="font-weight: bold; text-decoration: underline;">B2</span> : <span style="font-weight: bold;">virtual</span> <span style="font-weight: bold; text-decoration: underline;">A</span>
+{
+    <span style="font-weight: bold;">virtual</span> <span style="font-weight: bold; text-decoration: underline;">void</span> <span style="font-weight: bold;">f</span>() <span style="font-weight: bold;">const</span> <span style="font-weight: bold;">override</span> {}
+    <span style="font-weight: bold;">virtual</span> <span style="font-weight: bold; text-decoration: underline;">void</span> <span style="font-weight: bold;">fB2</span>() <span style="font-weight: bold;">const</span> {}
+    <span style="font-weight: bold; text-decoration: underline;">long</span> <span style="font-weight: bold; font-style: italic;">b2</span> = 0;
+};
+
+
+<span style="font-weight: bold;">struct</span> <span style="font-weight: bold; text-decoration: underline;">C</span> : <span style="font-weight: bold; text-decoration: underline;">B1</span>, <span style="font-weight: bold; text-decoration: underline;">B2</span>
+{
+    <span style="font-weight: bold;">virtual</span> <span style="font-weight: bold; text-decoration: underline;">void</span> f() <span style="font-weight: bold;">const</span> <span style="font-weight: bold;">override</span> {}
+    <span style="font-weight: bold;">virtual</span> <span style="font-weight: bold; text-decoration: underline;">void</span> <span style="font-weight: bold;">fB1</span>() <span style="font-weight: bold;">const</span> <span style="font-weight: bold;">override</span> {}
+    <span style="font-weight: bold;">virtual</span> <span style="font-weight: bold; text-decoration: underline;">void</span> <span style="font-weight: bold;">fC</span>() <span style="font-weight: bold;">const</span> {}
+    <span style="font-weight: bold; text-decoration: underline;">long</span> <span style="font-weight: bold; font-style: italic;">c</span> = 0;
+};
+
+
+<span style="font-weight: bold; text-decoration: underline;">int</span> <span style="font-weight: bold;">main</span>()
+{
+    <span style="font-weight: bold; text-decoration: underline;">A</span> <span style="font-weight: bold; font-style: italic;">a</span>;
+    <span style="font-weight: bold; text-decoration: underline;">B1</span> <span style="font-weight: bold; font-style: italic;">b1</span>;
+    <span style="font-weight: bold; text-decoration: underline;">B2</span> <span style="font-weight: bold; font-style: italic;">b2</span>;
+    <span style="font-weight: bold; text-decoration: underline;">C</span> <span style="font-weight: bold; font-style: italic;">c</span>;
+
+    <span style="font-weight: bold; text-decoration: underline;">B2</span> *<span style="font-weight: bold; font-style: italic;">pb2</span> = &amp;c;
+    pb2-&gt;f(); <span style="font-weight: bold; font-style: italic;">// </span><span style="font-weight: bold; font-style: italic;">non-virtual thunk</span>
+    pb2-&gt;a = 0; <span style="font-weight: bold; font-style: italic;">// </span><span style="font-weight: bold; font-style: italic;">vbase_offset</span>
+
+    <span style="font-weight: bold; text-decoration: underline;">A</span> *<span style="font-weight: bold; font-style: italic;">pa</span> = &amp;c;
+    pa-&gt;f();  <span style="font-weight: bold; font-style: italic;">// </span><span style="font-weight: bold; font-style: italic;">virtual thunk, vcall_offset</span>
+
+    <span style="font-weight: bold; text-decoration: underline;">C</span> *<span style="font-weight: bold; font-style: italic;">pc</span> = <span style="font-weight: bold;">dynamic_cast</span>&lt;<span style="font-weight: bold; text-decoration: underline;">C</span> *&gt;(pa);  <span style="font-weight: bold; font-style: italic;">// </span><span style="font-weight: bold; font-style: italic;">dynamic_cast</span>
+    <span style="font-weight: bold;">const</span> <span style="font-weight: bold; text-decoration: underline;">std</span>::<span style="font-weight: bold; text-decoration: underline;">type_info</span> &amp;<span style="font-weight: bold; font-style: italic;">ti</span> = <span style="font-weight: bold;">typeid</span>(*pa);  <span style="font-weight: bold; font-style: italic;">// </span><span style="font-weight: bold; font-style: italic;">typeid</span>
+
+    <span style="font-weight: bold; text-decoration: underline;">void</span> *<span style="font-weight: bold; font-style: italic;">pvoid</span> = <span style="font-weight: bold;">dynamic_cast</span>&lt;<span style="font-weight: bold; text-decoration: underline;">void</span> *&gt;(pa);  <span style="font-weight: bold; font-style: italic;">// </span><span style="font-weight: bold; font-style: italic;">top offset</span>
+
+    <span style="font-weight: bold;">return</span> 0;
+}
+</pre>
+</div>
+</div>
+<div id="outline-container-org7898506" class="outline-3">
+<h3 id="org7898506"><span class="section-number-3">2.1.</span> 内存布局</h3>
+<div class="outline-text-3" id="text-2-1">
+<p>
+子类内存可以被分为两部分，第一部分存储多个父类对应的subobject，第二部分则存储子类自己的数据成员。
+子类内存中必须包含所有父类完整的subobject，否则子类指针将无法被向上转型为父类指针（指向子类对象相应subobject的父类指针将出现数据成员内存访问问题）。
+</p>
+
+<p>
+当具有虚函数时，对象内存的第一块为vptr（vtable指针）。
+比如，A的对象内存布局如下：
+</p>
+<pre class="example" id="orgbd17a8e">
+0 | struct A
+0 |   (A vtable pointer)
+8 |   long a
+  | [sizeof=16, dsize=16, align=8,
+  |  nvsize=16, nvalign=8]
+</pre>
+
+<p>
+对于虚继承，虚基类subobject位于对象内存最后（普通继承基类的subobject位于对象内存最前面）。
+比如：
+</p>
+<ol class="org-ol">
+<li><p>
+B1的对象内存布局如下：
+</p>
+<pre class="example" id="orga0aa7a8">
+ 0 | struct B1
+ 0 |   (B1 vtable pointer)
+ 8 |   long b1
+16 |   struct A (virtual base)
+16 |     (A vtable pointer)
+24 |     long a
+   | [sizeof=32, dsize=32, align=8,
+   |  nvsize=16, nvalign=8]
+</pre></li>
+<li><p>
+C的对象内存布局如下：
+</p>
+<pre class="example" id="org6493369">
+ 0 | struct C
+ 0 |   struct B1 (primary base)
+ 0 |     (B1 vtable pointer)
+ 8 |     long b1
+16 |   struct B2 (base)
+16 |     (B2 vtable pointer)
+24 |     long b2
+32 |   long c
+40 |   struct A (virtual base)
+40 |     (A vtable pointer)
+48 |     long a
+   | [sizeof=56, dsize=56, align=8,
+   |  nvsize=40, nvalign=8]
+</pre></li>
+</ol>
+</div>
+</div>
+<div id="outline-container-org1503e64" class="outline-3">
+<h3 id="org1503e64"><span class="section-number-3">2.2.</span> 虚函数表</h3>
+<div class="outline-text-3" id="text-2-2">
+<p>
+C++子类的虚函数表内容源自扩增和修改后的父类虚函数表内容的集合。
+子类vtable必须包含完整的父类vtable，否则指向子类对象的父类指针将无法正确使用虚函数。
+</p>
+
+<p>
+C的虚函数表的内容比A/B1/B2丰富不少，因此本文将主要分析C的虚函数表。
+C的虚函数表内容如下：
+</p>
+<pre class="example" id="orgb343dd2">
+C::_ZTV1C: 24 entries
+################################### B1 &amp;&amp; C ####################################
+0     40                                   # 40
+8     (int (*)(...))0                      # 0
+16    (int (*)(...))(&amp; _ZTI1C)             # typeinfo for C
+24    (int (*)(...))C::f                   # C::f() const
+32    (int (*)(...))C::fB1                 # C::fB1() const
+40    (int (*)(...))C::~C                  # C::~C() [complete object destructor]
+48    (int (*)(...))C::~C                  # C::~C() [deleting destructor]
+56    (int (*)(...))C::fC                  # C::fC() const
+###################################### B2 ######################################
+64    24                                   # 24
+72    (int (*)(...))-16                    # -16
+80    (int (*)(...))(&amp; _ZTI1C)             # typeinfo for C
+88    (int (*)(...))C::_ZThn16_NK1C1fEv    # non-virtual thunk to C::f() const
+96    (int (*)(...))B2::fB2                # B2::fB2() const
+104   (int (*)(...))C::_ZThn16_N1CD1Ev     # non-virtual thunk to C::~C() [complete object destructor]
+112   (int (*)(...))C::_ZThn16_N1CD0Ev     # non-virtual thunk to C::~C() [deleting destructor]
+####################################### A ######################################
+120   18446744073709551576                 # -40
+128   0                                    # 0
+136   18446744073709551576                 # -40
+144   (int (*)(...))-40                    # -40
+152   (int (*)(...))(&amp; _ZTI1C)             # typeinfo for C
+160   (int (*)(...))C::_ZTv0_n24_NK1C1fEv  # virtual thunk to C::f() const
+168   (int (*)(...))A::fA                  # A::fA() const
+176   (int (*)(...))C::_ZTv0_n40_N1CD1Ev   # virtual thunk to C::~C() [complete object destructor]
+184   (int (*)(...))C::_ZTv0_n40_N1CD0Ev   # virtual thunk to C::~C() [deleting destructor]
+</pre>
+
+<p>
+在C的虚函数表中，除了虚函数指针外还有其他内容，包括typeinfo指针、top offset、vbase offset和vcall offset，下面将逐一进行分析。
+</p>
+</div>
+<div id="outline-container-org786bd1f" class="outline-4">
+<h4 id="org786bd1f"><span class="section-number-4">2.2.1.</span> 虚函数指针</h4>
+<div class="outline-text-4" id="text-2-2-1">
+<p>
+虚函数表做最重要的内容当然是虚函数指针，大多数C++编译器通过其来实现运行时多态。
+子类vtable内容可以被认为是源自扩增和修改后的父类vtable，扩增的目的是存储子类自己的虚函数，而修改的目的将某些虚函数指针被覆盖成了子类实现的虚函数指针以实现运行时多态。
+</p>
+
+<p>
+由于C++支持多重继承，而某些父类对应的subobject起始地址和对象整体的起始地址并不相同（例如，C对象的中的B2 subobject区的起始地址就和C对象起始地址大16）。
+此时，若通过父类指针来多态地调用子类函数虚函数实现，就必须调整this指针（否则子类实现的虚函数将无法正确使用子类成员数据），而这是通过thunk函数来实现的。
+Thunk函数本质上是在原函数执行之前先执行一段其他代码（此处为调整this指针），相当于Lisp中的advice和Java Spring中的切面。
+</p>
+
+<p>
+C++ thunk分为non-virtual thunk和virtual thunk，前者为非虚基类subobject对应的thunk（例如，vtable<sub>C</sub> + 88为non-virtual thunk to C::f() const），后者为虚基类subobject对应的thunk（例如为vtable<sub>C</sub> + 160为virtual thunk to C::f() const）。
+</p>
+</div>
+<ol class="org-ol">
+<li><a id="org1217ae4"></a>Non-Virtual Thunk<br />
+<div class="outline-text-5" id="text-2-2-1-1">
+<p>
+对应non-virtual thunk, 可以静态地分析出实现对应虚函数的子类subobject的内存地址，因此non-virtual thunk在调用子类实现的虚函数前仅需根据静态分析出来的offset调整一下this指针即可。
+</p>
+
+<p>
+​<code>pb2-&gt;f()</code>​对应的汇编代码如下：
+</p>
+<pre class="example" id="orgd422b0f">
+# pb2-&gt;f();
+movq    -24(%rbp), %rax  # this ptr
+movq    (%rax), %rax  # vptr
+movq    (%rax), %rdx  # vtable[0], non-virtual thunk to C::f() const
+movq    -24(%rbp), %rax  # this ptr
+movq    %rax, %rdi
+call    *%rdx
+
+# non-virtual thunk to C::f() const
+subq    $16, %rdi  # 调整this指针为this - 16, 而B2 subobject的offset恰好为16，因此调整完后this指针指向C对象内存开始处，从而可以正确地调用子类C实现的虚函数C::f()
+jmp     .LTHUNK3
+</pre>
+</div>
+</li>
+<li><a id="virtual_thunk"></a>Virtual Thunk<br />
+<div class="outline-text-5" id="text-virtual_thunk">
+<p>
+一个子类对象的各个虚基类subobject偏移各异，因此当子类同时覆盖了多个基类中的具有相同签名的虚函数时，通过不同虚基类指针调用该子类所实现的虚函数时对this指针的调整量也各不相同。
+若只为子类所覆盖的某个虚函数实现一个virtual thunk，那么该thunk中的this指针调整量将不能是编译时确定的一个固定值，而是通过在运行时动态地查询vcall offset来获取（后面将详细介绍vcall offset）。
+例如，若B覆盖了其两个虚基类A1和A2中共同的虚函数A1/A2::f()，若在virtual thunk to B::f()中写死this指针调整量，那么需要为A1和A2各实现一个仅this指针调整量不同的virtual thunk（其实感觉这也是可以接受的，但是GCC没有选择这种做法）。
+</p>
+
+<p>
+​<code>pa-&gt;f()</code>​对应的汇编代码如下：
+</p>
+<pre class="example" id="org77c24ee">
+# pa-&gt;f();
+movq    -32(%rbp), %rax  # this ptr
+movq    (%rax), %rax  # vptr
+movq    (%rax), %rdx  # vtable[0], virtual thunk to C::f() const
+movq    -32(%rbp), %rax  # this ptr
+movq    %rax, %rdi
+call    *%rdx
+
+# virtual thunk to C::f() const
+movq    (%rdi), %r10  # vptr
+addq    -24(%r10), %rdi  # 调整this指针为this + vtable[-24], 而vtable[-24] = -40为vcall_offset。调整完后，A subobject的offset恰好为40，因此调整完后this指针指向C对象内存开始处，从而可以正确地调用子类C实现的虚函数C::f()
+jmp     .LTHUNK2
+</pre>
+</div>
+</li>
+</ol>
+</div>
+<div id="outline-container-orgdfacf1b" class="outline-4">
+<h4 id="orgdfacf1b"><span class="section-number-4">2.2.2.</span> Type Info指针</h4>
+<div class="outline-text-4" id="text-2-2-2">
+<p>
+VTable中第一个虚函数指针之前的那个指针为type info指针，其被用于实现Run-Time Type Identification (RTTI)。
+dynamic<sub>cast</sub>()和typeid()函数都是根据type info指针来实现的。
+</p>
+
+<p>
+Type info功能本质上和Java的class对象类似，只是其内容没有Java class对象丰富，因此不能以次来实现Java中的运行时反射功能。
+</p>
+
+<p>
+dynamic<sub>cast</sub>()和typeid()和对应的汇编代码如下：
+</p>
+<pre class="example" id="orgfbe98b9">
+# C *pc = dynamic_cast&lt;C *&gt;(pa);
+        movq    -32(%rbp), %rax  # this ptr
+        testq   %rax, %rax
+        je      .L25
+        movq    $-1, %rcx
+        movl    $typeinfo for C, %edx
+        movl    $typeinfo for A, %esi
+        movq    %rax, %rdi
+        call    __dynamic_cast  # https://github.com/gcc-mirror/gcc/blob/releases/gcc-12.2.0/libstdc%2B%2B-v3/libsupc%2B%2B/dyncast.cc#L44
+        jmp     .L26
+.L25:
+        movl    $0, %eax
+.L26:
+        movq    %rax, -40(%rbp)
+
+
+# const std::type_info &amp;type = typeid(*pa);
+        movq    -32(%rbp), %rax  # this ptr
+        testq   %rax, %rax
+        je      .L27
+        movq    (%rax), %rax
+        movq    -8(%rax), %rax  # vtable[-8], type info ptr for C
+        movq    %rax, -48(%rbp)
+</pre>
+<p>
+从汇编代码可以看出，dynamic<sub>cast</sub>()和typeid()都是通过vtable中的type info ptr来实现的。
+</p>
+</div>
+</div>
+<div id="outline-container-org05b26a1" class="outline-4">
+<h4 id="org05b26a1"><span class="section-number-4">2.2.3.</span> Top Offset</h4>
+<div class="outline-text-4" id="text-2-2-3">
+<p>
+VTable中type info指针之前的8 bits内容为top offset，其主要被用于虚继承时指针向下转型的this指针偏移量计算。
+虽然前面展示的​<code>dynamic_cast&lt;C *&gt;(pa)</code>​汇编代码看似仅用到了typeinfo（理论上仅需typeinfo即可判断是否满足继承关系要求），但是将父类指针向下转型到子类指针时所需的this指针偏移量仅当非虚继承时才可以在编译时statically确定。
+虚继承时，无法在编译时确定向下转型时所需的this指针偏移量，因为虚基类的偏移时不确定的。
+比如，在​<code>VA &lt;- B</code>​和​<code>VA &lt;- B &lt;- C</code>​两种继承关系中，将pVA指针向下转型到pB时所需的this指针偏移量时不同的。
+因此，在虚继承时，需要通过top offset来确定向下转型时所需的this指针偏移量，也就是​<code>dynast.cc#__dyncast()</code>​内部应该会消费top offset。
+</p>
+
+<p>
+另外，​<code>dynamic_cast&lt;void *&gt;()</code>​这种corner case会直接通过top offset来确定转型为void指针时所需的this指针偏移量，因为void类型没有typeinfo。
+​<code>dynamic_cast&lt;void *&gt;()</code>​对应的汇编代码如下：
+</p>
+<pre class="example" id="org40b9a82">
+# void *pvoid = dynamic_cast&lt;void *&gt;(pa);
+        movq    -32(%rbp), %rax  # this ptr
+        testq   %rax, %rax
+        je      .L29
+        jmp     .L34
+.L27:
+        call    __cxa_bad_typeid
+.L34:
+        movq    (%rax), %rdx  # vptr
+        subq    $16, %rdx
+        movq    (%rdx), %rdx  # vtable[-16] = -40, top offset for A, A_in_C subobject相对C对象开始的偏移为-40
+        addq    %rdx, %rax  # ptr to C
+        jmp     .L30
+.L29:
+        movl    $0, %eax
+.L30:
+        movq    %rax, -56(%rbp)
+</pre>
+<p>
+从汇编代码可以看出，​<code>dynamic_cast&lt;void *&gt;()</code>​是通过top offset来实现的。
+</p>
+</div>
+</div>
+<div id="outline-container-orgf0c2381" class="outline-4">
+<h4 id="orgf0c2381"><span class="section-number-4">2.2.4.</span> VBase Offset</h4>
+<div class="outline-text-4" id="text-2-2-4">
+<p>
+含虚基类的子类对应的vtable区中type info指针之前的8 bits内容为vbase offset，其被用于在通过子类指针访问虚基类的数据成员时确定虚基类subobject的内存偏移，因此其仅存在于含虚基类的子类对应vtable区中。
+虚基类subobject在不同子类中的偏移各不相同，因此无法在编译时根据子类指针静态地确定虚基类数据成员的偏移。
+比如，在​<code>VA &lt;- B</code>​和​<code>VA &lt;- B &lt;- C</code>​两种继承关系中，指针​<code>pB1 = new B</code>​和​<code>pB2 = new C</code>​访问VA的数据成员时所需的偏移量是不同的。
+此时，需要根据vbase offset动态地计算出虚基类subobject的位置，然后再获得虚基类数据成员的偏移。
+</p>
+
+<p>
+例如，​<code>pb2-&gt;a = 0</code>​对应的汇编代码如下：
+</p>
+<pre class="example" id="orgec9a534">
+# pb2-&gt;a = 0;
+movq    -24(%rbp), %rax  # this ptr
+movq    (%rax), %rax  # vptr
+subq    $24, %rax
+movq    (%rax), %rax  # vtable[-24] = 24, vbase offset, B2_in_C subobject相对A_in_C subobject的偏移为24
+movq    %rax, %rdx
+movq    -24(%rbp), %rax  # this ptr
+addq    %rdx, %rax  # ptr to the A_in_C subobject
+movq    $0, 8(%rax)  # ptr to A.a
+</pre>
+<p>
+从汇编代码可以看出，​<code>pb2-&gt;a = 0</code>​是通过vbase offset来实现的。
+</p>
+</div>
+</div>
+<div id="outline-container-orgddca1e5" class="outline-4">
+<h4 id="orgddca1e5"><span class="section-number-4">2.2.5.</span> VCall Offset</h4>
+<div class="outline-text-4" id="text-2-2-5">
+<p>
+虚基类vtable区中type info指针之前的8 bits内容为vcall offset，其被用于在通过虚基类指针访问子类覆盖过的虚函数时确定虚基类subobject相对子类subobject的偏移，因此其仅存在于含虚基类对应vtable区中。
+​<b>VCall offset和vbase offset是姊妹关系，vcall offset被用于访问子类实现的虚函数，而vbase ofset则被用于访问虚基类数据成员。</b>​
+两者的出现根本原因都是编译器无法在编译时根据子类指针静态地确定虚基类数据成员的偏移，因此需要vbase offset来获取虚基类suboject的位置，或者需要根据vcall offset来获取子类subobject的位置。
+</p>
+
+<p>
+示例中，A<sub>in</sub><sub>C</sub> subobject对应的vtable区中有4个虚函数指针有4个，而仅有3项vcall offset。
+可能原因为对应于complete object destructor和deleting destructor的最后两个虚函数指针共享一项vcall offset。
+</p>
+
+<p>
+VCall offset的汇编代码示例可以见上文中的<a href="#virtual_thunk">virtual thunk</a>。
+</p>
+</div>
+</div>
+</div>
+<div id="outline-container-org0d8d88c" class="outline-3">
+<h3 id="org0d8d88c"><span class="section-number-3">2.3.</span> 对象构造/析构与VTT</h3>
+<div class="outline-text-3" id="text-2-3">
+<p>
+除了vtable外，GCC还有virtual table table (VTT), 其主要被用于对象构建时。
+</p>
+
+<p>
+在​<code>VA &lt;- B1, B2 &lt;- C</code>​继承体系中，C的对象时如何构建的呢？
+一般而言，子类的CTOR会先调用父类的CTOR来构造父类的subobject，然后在再构造子类的subobject。
+在菱形继承时，由于从子类到虚基类会有多条路径，因此需要特殊处理。
+</p>
+</div>
+<div id="outline-container-org6362773" class="outline-4">
+<h4 id="org6362773"><span class="section-number-4">2.3.1.</span> CTOR</h4>
+</div>
+
+<div id="outline-container-org4ccefe6" class="outline-4">
+<h4 id="org4ccefe6"><span class="section-number-4">2.3.2.</span> DTOR</h4>
+</div>
+</div>
+</div>
+<div id="outline-container-orgef26a68" class="outline-2">
+<h2 id="orgef26a68"><span class="section-number-2">3.</span> 总结</h2>
+<div class="outline-text-2" id="text-3">
+<p>
+本文从一个简单例子出发来分析GCC所使用的C++虚继承的对象内存布局。
+需要注意的是，本文所分析虚继承对象内存布局不适用于MSVC（其采用了GCC中没有的虚基类表）。
+本人水平有限，如有错误之处请多包涵指正。
+</p>
+</div>
+</div>
+<div id="outline-container-orgfcfa3e7" class="outline-2">
+<h2 id="orgfcfa3e7"><span class="section-number-2">4.</span> 参考文档</h2>
+<div class="outline-text-2" id="text-4">
+<ol class="org-ol">
+<li><a href="https://itanium-cxx-abi.github.io/cxx-abi/abi.html">https://itanium-cxx-abi.github.io/cxx-abi/abi.html</a></li>
+<li><a href="https://stackoverflow.com/questions/6258559/what-is-the-vtt-for-a-class">https://stackoverflow.com/questions/6258559/what-is-the-vtt-for-a-class</a></li>
+<li><a href="https://stackoverflow.com/questions/50317010/why-is-there-a-top-offset-in-vtt-implemented-by-gcc">https://stackoverflow.com/questions/50317010/why-is-there-a-top-offset-in-vtt-implemented-by-gcc</a></li>
+</ol>
+</div>
+</div>
+
+    </div><!-- /.entry-content -->
+
+  </article>
+</section>
+        <section id="extras" class="body">
+        </section><!-- /#extras -->
+
+</body>
+</html>

@@ -1,0 +1,474 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <meta name="generator" content="Pelican" />
+        <title>Emacs GDB配置</title>
+        <link rel="stylesheet" href="/theme/css/main.css" />
+        <meta name="description" content="1. 窗口布局 2. 快捷键 2.1. 开始或结束调试 (my-gud-run-cont) 2.2. Toggle断点 (my-gud-toggle-breakpoint) 正如终端调试哪家强？所言，Emacs gud..." />
+
+        <style>
+          /* #content { max-width: 60em; margin: auto; } */
+          .title  { text-align: center;
+                     margin-bottom: .2em; }
+          .subtitle { text-align: center;
+                      font-size: medium;
+                      font-weight: bold;
+                      margin-top:0; }
+          .todo   { font-family: monospace; color: red; }
+          .done   { font-family: monospace; color: green; }
+          .priority { font-family: monospace; color: orange; }
+          .tag    { background-color: #eee; font-family: monospace;
+                    padding: 2px; font-size: 80%; font-weight: normal; }
+          .timestamp { color: #bebebe; }
+          .timestamp-kwd { color: #5f9ea0; }
+          .org-right  { margin-left: auto; margin-right: 0px;  text-align: right; }
+          .org-left   { margin-left: 0px;  margin-right: auto; text-align: left; }
+          .org-center { margin-left: auto; margin-right: auto; text-align: center; }
+          .underline { text-decoration: underline; }
+          #postamble p, #preamble p { font-size: 90%; margin: .2em; }
+          p.verse { margin-left: 3%; }
+          pre {
+            border: 1px solid #e6e6e6;
+            border-radius: 3px;
+            background-color: #f2f2f2;
+            padding: 8pt;
+            font-family: monospace;
+            overflow: auto;
+            margin: 1.2em;
+          }
+          pre.src {
+            position: relative;
+            overflow: auto;
+          }
+          pre.src:before {
+            display: none;
+            position: absolute;
+            top: -8px;
+            right: 12px;
+            padding: 3px;
+            color: #555;
+            background-color: #f2f2f299;
+          }
+          pre.src:hover:before { display: inline; margin-top: 14px;}
+          /* Languages per Org manual */
+          pre.src-asymptote:before { content: 'Asymptote'; }
+          pre.src-awk:before { content: 'Awk'; }
+          pre.src-authinfo::before { content: 'Authinfo'; }
+          pre.src-C:before { content: 'C'; }
+          /* pre.src-C++ doesn't work in CSS */
+          pre.src-clojure:before { content: 'Clojure'; }
+          pre.src-css:before { content: 'CSS'; }
+          pre.src-D:before { content: 'D'; }
+          pre.src-ditaa:before { content: 'ditaa'; }
+          pre.src-dot:before { content: 'Graphviz'; }
+          pre.src-calc:before { content: 'Emacs Calc'; }
+          pre.src-emacs-lisp:before { content: 'Emacs Lisp'; }
+          pre.src-fortran:before { content: 'Fortran'; }
+          pre.src-gnuplot:before { content: 'gnuplot'; }
+          pre.src-haskell:before { content: 'Haskell'; }
+          pre.src-hledger:before { content: 'hledger'; }
+          pre.src-java:before { content: 'Java'; }
+          pre.src-js:before { content: 'Javascript'; }
+          pre.src-latex:before { content: 'LaTeX'; }
+          pre.src-ledger:before { content: 'Ledger'; }
+          pre.src-lisp:before { content: 'Lisp'; }
+          pre.src-lilypond:before { content: 'Lilypond'; }
+          pre.src-lua:before { content: 'Lua'; }
+          pre.src-matlab:before { content: 'MATLAB'; }
+          pre.src-mscgen:before { content: 'Mscgen'; }
+          pre.src-ocaml:before { content: 'Objective Caml'; }
+          pre.src-octave:before { content: 'Octave'; }
+          pre.src-org:before { content: 'Org mode'; }
+          pre.src-oz:before { content: 'OZ'; }
+          pre.src-plantuml:before { content: 'Plantuml'; }
+          pre.src-processing:before { content: 'Processing.js'; }
+          pre.src-python:before { content: 'Python'; }
+          pre.src-R:before { content: 'R'; }
+          pre.src-ruby:before { content: 'Ruby'; }
+          pre.src-sass:before { content: 'Sass'; }
+          pre.src-scheme:before { content: 'Scheme'; }
+          pre.src-screen:before { content: 'Gnu Screen'; }
+          pre.src-sed:before { content: 'Sed'; }
+          pre.src-sh:before { content: 'shell'; }
+          pre.src-sql:before { content: 'SQL'; }
+          pre.src-sqlite:before { content: 'SQLite'; }
+          /* additional languages in org.el's org-babel-load-languages alist */
+          pre.src-forth:before { content: 'Forth'; }
+          pre.src-io:before { content: 'IO'; }
+          pre.src-J:before { content: 'J'; }
+          pre.src-makefile:before { content: 'Makefile'; }
+          pre.src-maxima:before { content: 'Maxima'; }
+          pre.src-perl:before { content: 'Perl'; }
+          pre.src-picolisp:before { content: 'Pico Lisp'; }
+          pre.src-scala:before { content: 'Scala'; }
+          pre.src-shell:before { content: 'Shell Script'; }
+          pre.src-ebnf2ps:before { content: 'ebfn2ps'; }
+          /* additional language identifiers per "defun org-babel-execute"
+               in ob-*.el */
+          pre.src-cpp:before  { content: 'C++'; }
+          pre.src-abc:before  { content: 'ABC'; }
+          pre.src-coq:before  { content: 'Coq'; }
+          pre.src-groovy:before  { content: 'Groovy'; }
+          /* additional language identifiers from org-babel-shell-names in
+             ob-shell.el: ob-shell is the only babel language using a lambda to put
+             the execution function name together. */
+          pre.src-bash:before  { content: 'bash'; }
+          pre.src-csh:before  { content: 'csh'; }
+          pre.src-ash:before  { content: 'ash'; }
+          pre.src-dash:before  { content: 'dash'; }
+          pre.src-ksh:before  { content: 'ksh'; }
+          pre.src-mksh:before  { content: 'mksh'; }
+          pre.src-posh:before  { content: 'posh'; }
+          /* Additional Emacs modes also supported by the LaTeX listings package */
+          pre.src-ada:before { content: 'Ada'; }
+          pre.src-asm:before { content: 'Assembler'; }
+          pre.src-caml:before { content: 'Caml'; }
+          pre.src-delphi:before { content: 'Delphi'; }
+          pre.src-html:before { content: 'HTML'; }
+          pre.src-idl:before { content: 'IDL'; }
+          pre.src-mercury:before { content: 'Mercury'; }
+          pre.src-metapost:before { content: 'MetaPost'; }
+          pre.src-modula-2:before { content: 'Modula-2'; }
+          pre.src-pascal:before { content: 'Pascal'; }
+          pre.src-ps:before { content: 'PostScript'; }
+          pre.src-prolog:before { content: 'Prolog'; }
+          pre.src-simula:before { content: 'Simula'; }
+          pre.src-tcl:before { content: 'tcl'; }
+          pre.src-tex:before { content: 'TeX'; }
+          pre.src-plain-tex:before { content: 'Plain TeX'; }
+          pre.src-verilog:before { content: 'Verilog'; }
+          pre.src-vhdl:before { content: 'VHDL'; }
+          pre.src-xml:before { content: 'XML'; }
+          pre.src-nxml:before { content: 'XML'; }
+          /* add a generic configuration mode; LaTeX export needs an additional
+             (add-to-list 'org-latex-listings-langs '(conf " ")) in .emacs */
+          pre.src-conf:before { content: 'Configuration File'; }
+
+          table { border-collapse:collapse; }
+          caption.t-above { caption-side: top; }
+          caption.t-bottom { caption-side: bottom; }
+          td, th { vertical-align:top;  }
+          th.org-right  { text-align: center;  }
+          th.org-left   { text-align: center;   }
+          th.org-center { text-align: center; }
+          td.org-right  { text-align: right;  }
+          td.org-left   { text-align: left;   }
+          td.org-center { text-align: center; }
+          dt { font-weight: bold; }
+          .footpara { display: inline; }
+          .footdef  { margin-bottom: 1em; }
+          .figure { padding: 1em; }
+          .figure p { text-align: center; }
+          .equation-container {
+            display: table;
+            text-align: center;
+            width: 100%;
+          }
+          .equation {
+            vertical-align: middle;
+          }
+          .equation-label {
+            display: table-cell;
+            text-align: right;
+            vertical-align: middle;
+          }
+          .inlinetask {
+            padding: 10px;
+            border: 2px solid gray;
+            margin: 10px;
+            background: #ffffcc;
+          }
+          #org-div-home-and-up
+           { text-align: right; font-size: 70%; white-space: nowrap; }
+          textarea { overflow-x: auto; }
+          .linenr { font-size: smaller }
+          .code-highlighted { background-color: #ffff00; }
+          .org-info-js_info-navigation { border-style: none; }
+          #org-info-js_console-label
+            { font-size: 10px; font-weight: bold; white-space: nowrap; }
+          .org-info-js_search-highlight
+            { background-color: #ffff00; color: #000000; font-weight: bold; }
+          .org-svg { }
+        </style>
+
+        <script>
+          window.MathJax = {
+            tex: {
+              ams: {
+                multlineWidth: '85%'
+              },
+              tags: 'ams',
+              tagSide: 'right',
+              tagIndent: '.8em'
+            },
+            chtml: {
+              scale: 1.0,
+              displayAlign: 'center',
+              displayIndent: '0em'
+            },
+            svg: {
+              scale: 1.0,
+              displayAlign: 'center',
+              displayIndent: '0em'
+            },
+            output: {
+              font: 'mathjax-modern',
+              displayOverflow: 'overflow'
+            }
+          };
+        </script>
+
+        <script
+          id="MathJax-script"
+          async
+          src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js">
+        </script>
+</head>
+
+<body id="index" class="home">
+        <header id="banner" class="body">
+                <nav><ul>
+                    <li><a href="/">首页</a></li>
+                    <li><a href="/categories.html">分类</a></li>
+                    <li><a href="/tags.html">标签</a></li>
+                    <li><a href="/archives.html">归档</a></li>
+                    <li><a href="https://github.com/azjf">关于</a></li>
+                </ul></nav>
+        </header><!-- /#banner -->
+<section id="content" class="body">
+  <article>
+    <header>
+      <h1 class="entry-title">
+        <a href="/emacs_gdb.html" rel="bookmark"
+           title="Permalink to Emacs GDB配置">Emacs GDB配置</a></h1>
+    </header>
+
+    <div class="entry-content">
+<footer class="post-info">
+        <abbr class="published" title="2025-03-18T00:00:00+08:00">
+                2025-03-18
+        </abbr>
+<p>分类: <a href="/category/kai-fa-gong-ju.html">开发工具</a></p>
+标签: <a href="/tag/kai-fa-gong-ju.html">开发工具</a> <a href="/tag/emacs.html">Emacs</a> <a href="/tag/gdb.html">GDB</a> <a href="/tag/gud-mode.html">GUD Mode</a> 
+</footer><!-- /.post-info -->      <div id="table-of-contents" role="doc-toc">
+
+<div id="text-table-of-contents" role="doc-toc">
+<ul>
+<li><a href="#orge85827a">1. 窗口布局</a></li>
+<li><a href="#orgca1d9ac">2. 快捷键</a>
+<ul>
+<li><a href="#org1ca5ab6">2.1. 开始或结束调试 (my-gud-run-cont)</a></li>
+<li><a href="#org878178b">2.2. Toggle断点 (my-gud-toggle-breakpoint)</a></li>
+</ul>
+</li>
+</ul>
+</div>
+</div>
+<p>
+正如<a href="https://zhuanlan.zhihu.com/p/32843449">终端调试哪家强？</a>所言，Emacs gud mode应该是终端下目前最强的GDB前端。
+随着Emacs版本更新，该文中的部分配置已失效，本文将探讨适用于Emacs 29.1的gud mode配置。
+另外，gud mode不提供“开始或结束调试”和“toggle断点”功能的原生支持，本文将给出这两个功能的实现方法。
+</p>
+
+<p>
+本文接下来将介绍Emacs GDB的配置方法，包括调试相关的各个buffer布局，以及调试状态下的快捷键配置。
+在继续阅读本文之前，建议先阅读<a href="https://zhuanlan.zhihu.com/p/32843449">终端调试哪家强？</a>以了解Emacs GDB的基础用法。
+</p>
+<div id="outline-container-orge85827a" class="outline-2">
+<h2 id="orge85827a"><span class="section-number-2">1.</span> 窗口布局</h2>
+<div class="outline-text-2" id="text-1">
+<p>
+使用M-x gdb进入调试状态后，默认情况下只有一个gdb cmdline窗口，而这通常不能满足调试需求。
+此时可以通过gdb-many-windows命令来启用多窗口布局，或者也可以gdb-many-windows变量设置为t来默认启用之。
+</p>
+
+<p>
+默认的多窗口布局通常也不能满足大家的个性化定制需求。
+gdb-save-window-configuration命令可以将通过拖拽方式等配置好的布局保存到配置文件，而gdb-default-window-configuration-file变量则可以将某个配置文件设置为默认布局。
+但是这个方法的缺点为通过配置文件加载的默认布局不能较好地适应终端窗口大小变化：改变终端窗口大小可能会导致各个调试buffer窗口相对比例失衡。
+</p>
+
+<p>
+Emacs是通过<a href="https://github.com/emacs-mirror/emacs/blob/emacs-29.1/lisp/progmodes/gdb-mi.el#L4986">gdb-setup-windows</a>来设置窗口默认布局，因此可以给其添加advice来达到改变默认布局的目的。
+这个方法可以较好地适应终端窗口大小变化，但advice的本质导致其可能无法兼容将来的Emacs版本。
+下面的advice代码可以生成下图所示的多窗口布局。
+</p>
+<div class="org-src-container">
+<pre class="src src-emacs-lisp">(advice-add 'gdb-setup-windows <span style="font-weight: bold;">:around</span> (<span style="font-weight: bold;">lambda</span> (orig-fun <span style="font-weight: bold; text-decoration: underline;">&amp;rest</span> args) (my-gdb-setup-windows)))
+<span style="font-weight: bold; font-style: italic;">;; </span><span style="font-weight: bold; font-style: italic;">https://github.com/emacs-mirror/emacs/blob/emacs-29.1/lisp/progmodes/gdb-mi.el#L4986</span>
+(<span style="font-weight: bold;">defun</span> <span style="font-weight: bold;">my-gdb-setup-windows</span> ()
+  (gdb-get-buffer-create 'gdb-locals-values-buffer)
+  (gdb-get-buffer-create 'gdb-locals-buffer)
+  (gdb-get-buffer-create 'gdb-stack-buffer)
+  (gdb-get-buffer-create 'gdb-breakpoints-buffer)
+  (set-window-dedicated-p (selected-window) nil)
+  (switch-to-buffer gud-comint-buffer)
+  (delete-other-windows)
+  (<span style="font-weight: bold;">let*</span> ((win11 (selected-window))
+        (win31 (split-window nil (/ (* (window-height) 3) 4)))
+        (win21 (split-window nil (/ (window-height) 3))))
+    <span style="font-weight: bold; font-style: italic;">;; </span><span style="font-weight: bold; font-style: italic;">1</span>
+    (<span style="font-weight: bold;">let*</span> ((win13 (split-window-right nil win11))
+          (win12 (split-window-right (/ (* (window-width) 2) 3) win11)))
+      (gdb-set-window-buffer (gdb-get-buffer-create 'gdb-inferior-io) nil win12)
+      (gdb-set-window-buffer (gdb-locals-buffer-name) nil win13))
+    <span style="font-weight: bold; font-style: italic;">;; </span><span style="font-weight: bold; font-style: italic;">2</span>
+    (select-window win21)
+    (set-window-buffer win21 (<span style="font-weight: bold;">or</span> (gdb-get-source-buffer) (list-buffers-noselect)))
+    (<span style="font-weight: bold;">setq</span> gdb-source-window-list (list (selected-window)))
+    (<span style="font-weight: bold;">let*</span> ((win22 (split-window-right nil win21))
+          (win23 (split-window-right (/ (* (window-width) 3) 4) win22)))
+      (gdb-set-window-buffer (gdb-get-buffer-create 'gdb-disassembly-buffer) nil win22)
+      (gdb-set-window-buffer (gdb-get-buffer-create 'gdb-registers-buffer) nil win23))
+    <span style="font-weight: bold; font-style: italic;">;; </span><span style="font-weight: bold; font-style: italic;">3</span>
+    (select-window win31)
+    (gdb-set-window-buffer (gdb-stack-buffer-name))
+    (<span style="font-weight: bold;">let</span> ((win32 (split-window-right)))
+      (gdb-set-window-buffer (gdb-get-buffer-create 'gdb-memory-buffer) nil win32))
+    <span style="font-weight: bold; font-style: italic;">;;</span>
+    (select-window win21)))
+</pre>
+</div>
+
+<div id="org7020c81" class="figure">
+<p><img src="https://github.com/azjf/azjf.github.io/raw/main/img/38/3773BC-4D2F-4F87-9F24-D797DCAD5DB8/2025-03-18_22-10-35_screenshot.png" alt="2025-03-18_22-10-35_screenshot.png" />
+</p>
+</div>
+</div>
+</div>
+<div id="outline-container-orgca1d9ac" class="outline-2">
+<h2 id="orgca1d9ac"><span class="section-number-2">2.</span> 快捷键</h2>
+<div class="outline-text-2" id="text-2">
+<p>
+Emacs通过gud mode来支持GDB, gud mode提供了很多调试相关命令，而这些命令可以通过定制gud-minor-mode-map以被绑定到快捷键上。
+例如，​<code>(define-key gud-minor-mode-map (kbd "&lt;f6&gt;") #'gud-next)</code>​即可将gud-next绑定到F6键上。
+</p>
+
+<p>
+常见的gud mode调试命令如下：
+</p>
+<table border="2" cellspacing="0" cellpadding="6" rules="groups" frame="hsides">
+
+
+<colgroup>
+<col  class="org-left" />
+
+<col  class="org-left" />
+</colgroup>
+<tbody>
+<tr>
+<td class="org-left">gud-run</td>
+<td class="org-left">开始调试</td>
+</tr>
+
+<tr>
+<td class="org-left">gud-kill</td>
+<td class="org-left">结束调试</td>
+</tr>
+
+<tr>
+<td class="org-left">gud-break</td>
+<td class="org-left">设置断点</td>
+</tr>
+
+<tr>
+<td class="org-left">gud-remove</td>
+<td class="org-left">清除断点</td>
+</tr>
+
+<tr>
+<td class="org-left">gud-next</td>
+<td class="org-left">单步执行，无视函数</td>
+</tr>
+
+<tr>
+<td class="org-left">gud-nexti</td>
+<td class="org-left">单步执行，进入函数</td>
+</tr>
+
+<tr>
+<td class="org-left">gud-util</td>
+<td class="org-left">执行到光标所在前行</td>
+</tr>
+
+<tr>
+<td class="org-left">gud-up</td>
+<td class="org-left">前移stack frame</td>
+</tr>
+
+<tr>
+<td class="org-left">gud-down</td>
+<td class="org-left">后移stack frame</td>
+</tr>
+</tbody>
+</table>
+
+<p>
+GUD mode默认没有提供“开始或结束调试”命令和“toggle断点”命令，因此无法直接使用默认gud命令来实现这些IDE中常见的快捷键。
+所幸这两个命令都可以被实现，下面将给出这两个命令的一种实现方法。
+</p>
+</div>
+<div id="outline-container-org1ca5ab6" class="outline-3">
+<h3 id="org1ca5ab6"><span class="section-number-3">2.1.</span> 开始或结束调试 (my-gud-run-cont)</h3>
+<div class="outline-text-3" id="text-2-1">
+<p>
+gdb-inferior-status变量可以被用来判断当前是否处于调试状态，可以基于其实现本命令，代码如下：
+</p>
+<div class="org-src-container">
+<pre class="src src-emacs-lisp"><span style="font-weight: bold; font-style: italic;">;; </span><span style="font-weight: bold; font-style: italic;">https://emacs.stackexchange.com/questions/37987/bindings-for-source-code-when-debugging-in-gdb-gud</span>
+(<span style="font-weight: bold;">defun</span> <span style="font-weight: bold;">my-gud-run-cont</span> (arg)
+  (<span style="font-weight: bold;">interactive</span> <span style="font-style: italic;">"p"</span>)
+  (<span style="font-weight: bold;">if</span> (assoc-string gdb-inferior-status '(<span style="font-style: italic;">"breakpoint-hit"</span> <span style="font-style: italic;">"end-stepping-range"</span> <span style="font-style: italic;">"watchpoint-trigger"</span> <span style="font-style: italic;">"read-watchpoint-trigger"</span> <span style="font-style: italic;">"access-watchpoint-trigger"</span> <span style="font-style: italic;">"function-finished"</span> <span style="font-style: italic;">"location-reached"</span> <span style="font-style: italic;">"watchpoint-scope"</span> <span style="font-style: italic;">"signal-received"</span>))
+      (gud-cont arg) (gud-run arg)))
+</pre>
+</div>
+</div>
+</div>
+<div id="outline-container-org878178b" class="outline-3">
+<h3 id="org878178b"><span class="section-number-3">2.2.</span> Toggle断点 (my-gud-toggle-breakpoint)</h3>
+<div class="outline-text-3" id="text-2-2">
+<p>
+若当前行具有断点，则行首字符的overlay属性中将具有断点信息。
+可以根据该原理来实现本命令，具体代码如下：
+</p>
+<div class="org-src-container">
+<pre class="src src-emacs-lisp">(<span style="font-weight: bold;">defun</span> <span style="font-weight: bold;">my-gud-breakpoint-overlay-get</span> ()
+  (<span style="font-weight: bold;">let*</span> ((pos (line-beginning-position)))
+         (<span style="font-weight: bold;">cl-loop</span> for overlay in (overlays-in pos pos)
+                  when (<span style="font-weight: bold;">or</span> (overlay-get overlay 'put-break) (overlay-get overlay 'put-image))
+                  return overlay)))
+
+(<span style="font-weight: bold;">defun</span> <span style="font-weight: bold;">my-gud-set-clear-breakpoint</span> (<span style="font-weight: bold; text-decoration: underline;">&amp;optional</span> tbreak)
+  (<span style="font-weight: bold;">interactive</span> <span style="font-style: italic;">"P"</span>)
+  (<span style="font-weight: bold;">if</span> (overlayp (my-gud-breakpoint-overlay-get))
+      (gud-remove nil)
+    (<span style="font-weight: bold;">if</span> tbreak (gud-tbreak nil) (gud-break nil))))
+
+(<span style="font-weight: bold;">defun</span> <span style="font-weight: bold;">my-gud-toggle-breakpoint</span> (arg)
+  (<span style="font-weight: bold;">interactive</span> <span style="font-style: italic;">"p"</span>)
+  (<span style="font-weight: bold;">when-let*</span> ((overlay (my-gud-breakpoint-overlay-get))
+              (obj (overlay-get overlay 'before-string)))
+    (<span style="font-weight: bold;">unless</span> (get-text-property 0 'gdb-bptno obj)  <span style="font-weight: bold; font-style: italic;">;; </span><span style="font-weight: bold; font-style: italic;">terminal</span>
+      (<span style="font-weight: bold;">when-let*</span> ((display-prop (get-text-property 0 'display obj))
+                  (display-obj (nth 1 display-prop)))
+        (<span style="font-weight: bold;">setq</span> obj display-obj)))
+    (<span style="font-weight: bold;">let*</span> ((enabled (get-text-property 0 'gdb-enabled obj))
+           (bptno (get-text-property 0 'gdb-bptno obj)))
+      (gud-basic-call (concat (<span style="font-weight: bold;">if</span> enabled <span style="font-style: italic;">"-break-disable "</span> <span style="font-style: italic;">"-break-enable "</span>) bptno)))))
+</pre>
+</div>
+</div>
+</div>
+</div>
+
+    </div><!-- /.entry-content -->
+
+  </article>
+</section>
+        <section id="extras" class="body">
+        </section><!-- /#extras -->
+
+</body>
+</html>

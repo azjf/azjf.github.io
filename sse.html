@@ -1,0 +1,529 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <meta name="generator" content="Pelican" />
+        <title>Server-Sent Events (SSE)异步客户端实现</title>
+        <link rel="stylesheet" href="/theme/css/main.css" />
+        <meta name="description" content="1. SSE简介 2. 基于Apache HttpAsyncClient的异步SSE客户端实现 2.1. HttpAsyncClient接口简介 2.2. SSE粘包与拆包 2.3. SSE异步回调接口 2.4. 核心实现 3. 基于Sogou..." />
+
+        <style>
+          /* #content { max-width: 60em; margin: auto; } */
+          .title  { text-align: center;
+                     margin-bottom: .2em; }
+          .subtitle { text-align: center;
+                      font-size: medium;
+                      font-weight: bold;
+                      margin-top:0; }
+          .todo   { font-family: monospace; color: red; }
+          .done   { font-family: monospace; color: green; }
+          .priority { font-family: monospace; color: orange; }
+          .tag    { background-color: #eee; font-family: monospace;
+                    padding: 2px; font-size: 80%; font-weight: normal; }
+          .timestamp { color: #bebebe; }
+          .timestamp-kwd { color: #5f9ea0; }
+          .org-right  { margin-left: auto; margin-right: 0px;  text-align: right; }
+          .org-left   { margin-left: 0px;  margin-right: auto; text-align: left; }
+          .org-center { margin-left: auto; margin-right: auto; text-align: center; }
+          .underline { text-decoration: underline; }
+          #postamble p, #preamble p { font-size: 90%; margin: .2em; }
+          p.verse { margin-left: 3%; }
+          pre {
+            border: 1px solid #e6e6e6;
+            border-radius: 3px;
+            background-color: #f2f2f2;
+            padding: 8pt;
+            font-family: monospace;
+            overflow: auto;
+            margin: 1.2em;
+          }
+          pre.src {
+            position: relative;
+            overflow: auto;
+          }
+          pre.src:before {
+            display: none;
+            position: absolute;
+            top: -8px;
+            right: 12px;
+            padding: 3px;
+            color: #555;
+            background-color: #f2f2f299;
+          }
+          pre.src:hover:before { display: inline; margin-top: 14px;}
+          /* Languages per Org manual */
+          pre.src-asymptote:before { content: 'Asymptote'; }
+          pre.src-awk:before { content: 'Awk'; }
+          pre.src-authinfo::before { content: 'Authinfo'; }
+          pre.src-C:before { content: 'C'; }
+          /* pre.src-C++ doesn't work in CSS */
+          pre.src-clojure:before { content: 'Clojure'; }
+          pre.src-css:before { content: 'CSS'; }
+          pre.src-D:before { content: 'D'; }
+          pre.src-ditaa:before { content: 'ditaa'; }
+          pre.src-dot:before { content: 'Graphviz'; }
+          pre.src-calc:before { content: 'Emacs Calc'; }
+          pre.src-emacs-lisp:before { content: 'Emacs Lisp'; }
+          pre.src-fortran:before { content: 'Fortran'; }
+          pre.src-gnuplot:before { content: 'gnuplot'; }
+          pre.src-haskell:before { content: 'Haskell'; }
+          pre.src-hledger:before { content: 'hledger'; }
+          pre.src-java:before { content: 'Java'; }
+          pre.src-js:before { content: 'Javascript'; }
+          pre.src-latex:before { content: 'LaTeX'; }
+          pre.src-ledger:before { content: 'Ledger'; }
+          pre.src-lisp:before { content: 'Lisp'; }
+          pre.src-lilypond:before { content: 'Lilypond'; }
+          pre.src-lua:before { content: 'Lua'; }
+          pre.src-matlab:before { content: 'MATLAB'; }
+          pre.src-mscgen:before { content: 'Mscgen'; }
+          pre.src-ocaml:before { content: 'Objective Caml'; }
+          pre.src-octave:before { content: 'Octave'; }
+          pre.src-org:before { content: 'Org mode'; }
+          pre.src-oz:before { content: 'OZ'; }
+          pre.src-plantuml:before { content: 'Plantuml'; }
+          pre.src-processing:before { content: 'Processing.js'; }
+          pre.src-python:before { content: 'Python'; }
+          pre.src-R:before { content: 'R'; }
+          pre.src-ruby:before { content: 'Ruby'; }
+          pre.src-sass:before { content: 'Sass'; }
+          pre.src-scheme:before { content: 'Scheme'; }
+          pre.src-screen:before { content: 'Gnu Screen'; }
+          pre.src-sed:before { content: 'Sed'; }
+          pre.src-sh:before { content: 'shell'; }
+          pre.src-sql:before { content: 'SQL'; }
+          pre.src-sqlite:before { content: 'SQLite'; }
+          /* additional languages in org.el's org-babel-load-languages alist */
+          pre.src-forth:before { content: 'Forth'; }
+          pre.src-io:before { content: 'IO'; }
+          pre.src-J:before { content: 'J'; }
+          pre.src-makefile:before { content: 'Makefile'; }
+          pre.src-maxima:before { content: 'Maxima'; }
+          pre.src-perl:before { content: 'Perl'; }
+          pre.src-picolisp:before { content: 'Pico Lisp'; }
+          pre.src-scala:before { content: 'Scala'; }
+          pre.src-shell:before { content: 'Shell Script'; }
+          pre.src-ebnf2ps:before { content: 'ebfn2ps'; }
+          /* additional language identifiers per "defun org-babel-execute"
+               in ob-*.el */
+          pre.src-cpp:before  { content: 'C++'; }
+          pre.src-abc:before  { content: 'ABC'; }
+          pre.src-coq:before  { content: 'Coq'; }
+          pre.src-groovy:before  { content: 'Groovy'; }
+          /* additional language identifiers from org-babel-shell-names in
+             ob-shell.el: ob-shell is the only babel language using a lambda to put
+             the execution function name together. */
+          pre.src-bash:before  { content: 'bash'; }
+          pre.src-csh:before  { content: 'csh'; }
+          pre.src-ash:before  { content: 'ash'; }
+          pre.src-dash:before  { content: 'dash'; }
+          pre.src-ksh:before  { content: 'ksh'; }
+          pre.src-mksh:before  { content: 'mksh'; }
+          pre.src-posh:before  { content: 'posh'; }
+          /* Additional Emacs modes also supported by the LaTeX listings package */
+          pre.src-ada:before { content: 'Ada'; }
+          pre.src-asm:before { content: 'Assembler'; }
+          pre.src-caml:before { content: 'Caml'; }
+          pre.src-delphi:before { content: 'Delphi'; }
+          pre.src-html:before { content: 'HTML'; }
+          pre.src-idl:before { content: 'IDL'; }
+          pre.src-mercury:before { content: 'Mercury'; }
+          pre.src-metapost:before { content: 'MetaPost'; }
+          pre.src-modula-2:before { content: 'Modula-2'; }
+          pre.src-pascal:before { content: 'Pascal'; }
+          pre.src-ps:before { content: 'PostScript'; }
+          pre.src-prolog:before { content: 'Prolog'; }
+          pre.src-simula:before { content: 'Simula'; }
+          pre.src-tcl:before { content: 'tcl'; }
+          pre.src-tex:before { content: 'TeX'; }
+          pre.src-plain-tex:before { content: 'Plain TeX'; }
+          pre.src-verilog:before { content: 'Verilog'; }
+          pre.src-vhdl:before { content: 'VHDL'; }
+          pre.src-xml:before { content: 'XML'; }
+          pre.src-nxml:before { content: 'XML'; }
+          /* add a generic configuration mode; LaTeX export needs an additional
+             (add-to-list 'org-latex-listings-langs '(conf " ")) in .emacs */
+          pre.src-conf:before { content: 'Configuration File'; }
+
+          table { border-collapse:collapse; }
+          caption.t-above { caption-side: top; }
+          caption.t-bottom { caption-side: bottom; }
+          td, th { vertical-align:top;  }
+          th.org-right  { text-align: center;  }
+          th.org-left   { text-align: center;   }
+          th.org-center { text-align: center; }
+          td.org-right  { text-align: right;  }
+          td.org-left   { text-align: left;   }
+          td.org-center { text-align: center; }
+          dt { font-weight: bold; }
+          .footpara { display: inline; }
+          .footdef  { margin-bottom: 1em; }
+          .figure { padding: 1em; }
+          .figure p { text-align: center; }
+          .equation-container {
+            display: table;
+            text-align: center;
+            width: 100%;
+          }
+          .equation {
+            vertical-align: middle;
+          }
+          .equation-label {
+            display: table-cell;
+            text-align: right;
+            vertical-align: middle;
+          }
+          .inlinetask {
+            padding: 10px;
+            border: 2px solid gray;
+            margin: 10px;
+            background: #ffffcc;
+          }
+          #org-div-home-and-up
+           { text-align: right; font-size: 70%; white-space: nowrap; }
+          textarea { overflow-x: auto; }
+          .linenr { font-size: smaller }
+          .code-highlighted { background-color: #ffff00; }
+          .org-info-js_info-navigation { border-style: none; }
+          #org-info-js_console-label
+            { font-size: 10px; font-weight: bold; white-space: nowrap; }
+          .org-info-js_search-highlight
+            { background-color: #ffff00; color: #000000; font-weight: bold; }
+          .org-svg { }
+        </style>
+
+        <script>
+          window.MathJax = {
+            tex: {
+              ams: {
+                multlineWidth: '85%'
+              },
+              tags: 'ams',
+              tagSide: 'right',
+              tagIndent: '.8em'
+            },
+            chtml: {
+              scale: 1.0,
+              displayAlign: 'center',
+              displayIndent: '0em'
+            },
+            svg: {
+              scale: 1.0,
+              displayAlign: 'center',
+              displayIndent: '0em'
+            },
+            output: {
+              font: 'mathjax-modern',
+              displayOverflow: 'overflow'
+            }
+          };
+        </script>
+
+        <script
+          id="MathJax-script"
+          async
+          src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js">
+        </script>
+</head>
+
+<body id="index" class="home">
+        <header id="banner" class="body">
+                <nav><ul>
+                    <li><a href="/">首页</a></li>
+                    <li><a href="/categories.html">分类</a></li>
+                    <li><a href="/tags.html">标签</a></li>
+                    <li><a href="/archives.html">归档</a></li>
+                    <li><a href="https://github.com/azjf">关于</a></li>
+                </ul></nav>
+        </header><!-- /#banner -->
+<section id="content" class="body">
+  <article>
+    <header>
+      <h1 class="entry-title">
+        <a href="/sse.html" rel="bookmark"
+           title="Permalink to Server-Sent Events (SSE)异步客户端实现">Server-Sent Events (SSE)异步客户端实现</a></h1>
+    </header>
+
+    <div class="entry-content">
+<footer class="post-info">
+        <abbr class="published" title="2025-05-18T00:00:00+08:00">
+                2025-05-18
+        </abbr>
+<p>分类: <a href="/category/network.html">Network</a></p>
+标签: <a href="/tag/network.html">Network</a> <a href="/tag/server-sent-events-sse.html">Server-Sent Events (SSE)</a> <a href="/tag/async-sse-client.html">Async SSE Client</a> <a href="/tag/yi-bu-sseke-hu-duan.html">异步SSE客户端</a> 
+</footer><!-- /.post-info -->      <div id="table-of-contents" role="doc-toc">
+
+<div id="text-table-of-contents" role="doc-toc">
+<ul>
+<li><a href="#orgd55b01f">1. SSE简介</a></li>
+<li><a href="#org7e4438d">2. 基于Apache HttpAsyncClient的异步SSE客户端实现</a>
+<ul>
+<li><a href="#org1b47179">2.1. HttpAsyncClient接口简介</a></li>
+<li><a href="#orgbda21ea">2.2. SSE粘包与拆包</a></li>
+<li><a href="#orgd8f3071">2.3. SSE异步回调接口</a></li>
+<li><a href="#org2ec3e56">2.4. 核心实现</a></li>
+</ul>
+</li>
+<li><a href="#orgab5e081">3. 基于Sogou Workflow的异步SSE客户端实现方法概述</a></li>
+<li><a href="#org5757379">4. 总结</a></li>
+</ul>
+</div>
+</div>
+<p>
+最近遇到了一个解析和转发基于HTTP Server-Sent Events (SSE)应用协议的需求，其实现方法和普通HTTP接口调用差异较大。
+本文将讨论该协议的异步客户端实现方法，希望能帮助到遇到类似需求的人。
+</p>
+<div id="outline-container-orgd55b01f" class="outline-2">
+<h2 id="orgd55b01f"><span class="section-number-2">1.</span> SSE简介</h2>
+<div class="outline-text-2" id="text-1">
+<p>
+SSE是一种基于HTTP的服务端向客户端推送消息的格式，其可以基于HTTP 1实现，比WebSocket简单。
+SSE本质上是服务端通过一个长链接向客户端不停地推送消息，如<a href="https://www.ruanyifeng.com/blog/2017/05/server-sent_events.html">下图</a>所示：
+</p>
+
+<div id="org21c93fe" class="figure">
+<p><img src="https://github.com/azjf/azjf.github.io/raw/main/img/35/FD5FDD-FE99-49CB-8419-08A3B279015B/sse.jpg" alt="sse.jpg" width="400px" />
+</p>
+</div>
+
+<p>
+服务器发送的SSE响应格式如下：
+</p>
+<ol class="org-ol">
+<li>header: Content-Type必须为text/event-stream</li>
+<li>body由多个event构成，event间由​<code>\n\n</code>​分隔，这些event不必被一次发送完，而是如上图般被多次发送</li>
+</ol>
+
+<p>
+中转SSE协议时不能使用普通的同步http client, 因为其仅当收到完整的http响应后才会返回，而SSE协议一般要求每收到一个SSE event后就做相应的处理。
+因此，SSE协议中转时一般需要使用异步http client.
+</p>
+
+<p>
+目前，如腾讯元宝等LLM大模型在聊天回复时就使用了SSE，以便流式地快速响应客户端请求。
+</p>
+</div>
+</div>
+<div id="outline-container-org7e4438d" class="outline-2">
+<h2 id="org7e4438d"><span class="section-number-2">2.</span> 基于Apache HttpAsyncClient的异步SSE客户端实现</h2>
+<div class="outline-text-2" id="text-2">
+<p>
+正如前文所言，中转SSE协议时不能使用普通的同步Apache HttpClient, 而是需要使用异步的Apache HttpAsyncClient，其可以实现每收到一点服务端数据后就回调某个用户自定义函数来处理之。
+</p>
+</div>
+<div id="outline-container-org1b47179" class="outline-3">
+<h3 id="org1b47179"><span class="section-number-3">2.1.</span> HttpAsyncClient接口简介</h3>
+<div class="outline-text-3" id="text-2-1">
+<p>
+Apache HttpAsyncClient底层基于Java NIO, 其提供了异步接口来接收HTTP响应，该接口实现了Reactor语义，如下：
+</p>
+<div class="org-src-container">
+<pre class="src src-java">&lt;<span style="font-weight: bold; text-decoration: underline;">T</span>&gt; <span style="font-weight: bold; text-decoration: underline;">Future</span>&lt;<span style="font-weight: bold; text-decoration: underline;">T</span>&gt; execute(<span style="font-weight: bold; text-decoration: underline;">HttpAsyncRequestProducer</span> <span style="font-weight: bold; font-style: italic;">requestProducer</span>, <span style="font-weight: bold; text-decoration: underline;">HttpAsyncResponseConsumer</span>&lt;<span style="font-weight: bold; text-decoration: underline;">T</span>&gt; <span style="font-weight: bold; font-style: italic;">responseConsumer</span>, <span style="font-weight: bold; text-decoration: underline;">FutureCallback</span>&lt;<span style="font-weight: bold; text-decoration: underline;">T</span>&gt; <span style="font-weight: bold; font-style: italic;">callback</span>);
+
+<span style="font-weight: bold;">public</span> <span style="font-weight: bold;">abstract</span> <span style="font-weight: bold;">class</span> <span style="font-weight: bold; text-decoration: underline;">AsyncCharConsumer</span>&lt;<span style="font-weight: bold; text-decoration: underline;">T</span>&gt; <span style="font-weight: bold;">extends</span> <span style="font-weight: bold; text-decoration: underline;">AbstractAsyncResponseConsumer</span>&lt;<span style="font-weight: bold; text-decoration: underline;">T</span>&gt; <span style="font-weight: bold;">implements</span> <span style="font-weight: bold; text-decoration: underline;">HttpAsyncResponseConsumer</span>&lt;<span style="font-weight: bold; text-decoration: underline;">T</span>&gt; {
+    <span style="font-weight: bold;">protected</span> <span style="font-weight: bold;">abstract</span> <span style="font-weight: bold; text-decoration: underline;">void</span> <span style="font-weight: bold;">onCharReceived</span>(<span style="font-weight: bold; text-decoration: underline;">CharBuffer</span> <span style="font-weight: bold; font-style: italic;">buf</span>, <span style="font-weight: bold; text-decoration: underline;">IOControl</span> <span style="font-weight: bold; font-style: italic;">ioControl</span>) <span style="font-weight: bold;">throws</span> <span style="font-weight: bold; text-decoration: underline;">IOException</span>;
+
+    <span style="font-weight: bold;">protected</span> <span style="font-weight: bold;">abstract</span> <span style="font-weight: bold; text-decoration: underline;">void</span> <span style="font-weight: bold;">onResponseReceived</span>(<span style="font-weight: bold; text-decoration: underline;">HttpResponse</span> <span style="font-weight: bold; font-style: italic;">response</span>) <span style="font-weight: bold;">throws</span> <span style="font-weight: bold; text-decoration: underline;">HttpException</span>, <span style="font-weight: bold; text-decoration: underline;">IOException</span>;
+
+    <span style="font-weight: bold;">protected</span> <span style="font-weight: bold;">abstract</span> <span style="font-weight: bold; text-decoration: underline;">T</span> <span style="font-weight: bold;">buildResult</span>(<span style="font-weight: bold; text-decoration: underline;">HttpContext</span> <span style="font-weight: bold; font-style: italic;">context</span>) <span style="font-weight: bold;">throws</span> <span style="font-weight: bold; text-decoration: underline;">Exception</span>;
+}
+
+<span style="font-weight: bold;">public</span> <span style="font-weight: bold;">interface</span> <span style="font-weight: bold; text-decoration: underline;">FutureCallback</span>&lt;<span style="font-weight: bold; text-decoration: underline;">T</span>&gt; {
+    <span style="font-weight: bold; text-decoration: underline;">void</span> <span style="font-weight: bold;">completed</span>(<span style="font-weight: bold; text-decoration: underline;">T</span> <span style="font-weight: bold; font-style: italic;">var1</span>);
+
+    <span style="font-weight: bold; text-decoration: underline;">void</span> <span style="font-weight: bold;">failed</span>(<span style="font-weight: bold; text-decoration: underline;">Exception</span> <span style="font-weight: bold; font-style: italic;">var1</span>);
+
+    <span style="font-weight: bold; text-decoration: underline;">void</span> <span style="font-weight: bold;">cancelled</span>();
+}
+</pre>
+</div>
+<p>
+AsyncCharConsumer#onCharReceived(CharBuffer buf, IOControl ioControl)将在收到响应时被回调，其中的IOControl入参可被用于操作连接，比如关闭连接等。
+FutureCallback#completed/failed()则分别在收到完整响应/出错时被回调。
+这些回调函数都在HttpAsyncClient的IO Dispatcher Worker线程中执行，而其线程数可以通过IOReactorConfig.setIoThreadCount()来设置。
+</p>
+</div>
+</div>
+<div id="outline-container-orgbda21ea" class="outline-3">
+<h3 id="orgbda21ea"><span class="section-number-3">2.2.</span> SSE粘包与拆包</h3>
+<div class="outline-text-3" id="text-2-2">
+<p>
+Apache HttpAsyncClient AsyncCharConsumer#onCharReceived()收到只是数据片段，而非一个完整的SSE event, 因此会遇到类似于TCP粘包的问题。
+为了解析出SSE event，需要对这些数据片段进行累积，其可以通过如下的SseParser来实现：
+</p>
+<div class="org-src-container">
+<pre class="src src-java"><span style="font-weight: bold;">public</span> <span style="font-weight: bold;">class</span> <span style="font-weight: bold; text-decoration: underline;">SseParser</span> {
+    <span style="font-weight: bold;">private</span> <span style="font-weight: bold;">final</span> <span style="font-weight: bold; text-decoration: underline;">StringBuilder</span> <span style="font-weight: bold; font-style: italic;">sb</span> = <span style="font-weight: bold;">new</span> <span style="font-weight: bold; text-decoration: underline;">StringBuilder</span>();
+
+    <span style="font-weight: bold;">private</span> <span style="font-weight: bold; text-decoration: underline;">int</span> <span style="font-weight: bold; font-style: italic;">last</span> = 0;
+
+    <span style="font-weight: bold;">public</span> <span style="font-weight: bold; text-decoration: underline;">void</span> <span style="font-weight: bold;">append</span>(<span style="font-weight: bold; text-decoration: underline;">String</span> <span style="font-weight: bold; font-style: italic;">s</span>) {
+        sb.append(s);
+    }
+
+    <span style="font-style: italic;">/**</span>
+<span style="font-style: italic;">     * </span><span style="font-weight: bold; font-style: italic; text-decoration: underline;">@return</span><span style="font-style: italic;"> &#36820;&#22238;&#19968;&#20010;SSE event</span>
+<span style="font-style: italic;">     */</span>
+    <span style="font-weight: bold;">public</span> <span style="font-weight: bold; text-decoration: underline;">String</span> <span style="font-weight: bold;">next</span>() {
+        <span style="font-weight: bold;">for</span> (<span style="font-weight: bold; text-decoration: underline;">int</span> <span style="font-weight: bold; font-style: italic;">i</span> = last; i &lt; sb.length() - 1; ++i) {
+            <span style="font-weight: bold; font-style: italic;">// </span><span style="font-weight: bold; font-style: italic;">SSE event&#20197;"\n\n"&#20998;&#21106;</span>
+            <span style="font-weight: bold;">if</span> (sb.charAt(i) == <span style="font-style: italic;">'\n'</span> &amp;&amp; sb.charAt(i + 1) == <span style="font-style: italic;">'\n'</span>) {
+                <span style="font-weight: bold; text-decoration: underline;">String</span> <span style="font-weight: bold; font-style: italic;">s</span> = sb.substring(last, i);
+                last = i + 2;
+                <span style="font-weight: bold;">return</span> s;
+            }
+        }
+        <span style="font-weight: bold;">return</span> <span style="font-weight: bold; text-decoration: underline;">null</span>;
+    }
+
+    <span style="font-weight: bold;">public</span> <span style="font-weight: bold; text-decoration: underline;">boolean</span> <span style="font-weight: bold;">isEmpty</span>() {
+        <span style="font-weight: bold;">return</span> sb.isEmpty();
+    }
+}
+</pre>
+</div>
+</div>
+</div>
+<div id="outline-container-orgd8f3071" class="outline-3">
+<h3 id="orgd8f3071"><span class="section-number-3">2.3.</span> SSE异步回调接口</h3>
+<div class="outline-text-3" id="text-2-3">
+<p>
+一般而言，异步客户端在接收消息的不同阶段（如每收到一块数据，收到全部数据，数据接收时发送错误）一般需要回调不同的函数，因此可以仿照RxJava Observer接口定义一下异步SSE客户端回调接口，如下：
+</p>
+<div class="org-src-container">
+<pre class="src src-java"><span style="font-weight: bold;">public</span> <span style="font-weight: bold;">interface</span> <span style="font-weight: bold; text-decoration: underline;">AsyncSseCallback</span> {
+    <span style="font-style: italic;">/**</span>
+<span style="font-style: italic;">     * &#25910;&#21040;&#19968;&#20010;SSE event&#26102;&#35843;&#29992;</span>
+<span style="font-style: italic;">     *</span>
+<span style="font-style: italic;">     * </span><span style="font-weight: bold; font-style: italic; text-decoration: underline;">@param</span><span style="font-style: italic;"> event</span>
+<span style="font-style: italic;">     * </span><span style="font-weight: bold; font-style: italic; text-decoration: underline;">@return</span><span style="font-style: italic;"> &#26159;&#21542;&#25104;&#21151;&#22788;&#29702;event, &#36820;&#22238;false&#23558;&#23548;&#33268;&#32456;&#27490;&#25509;&#25910;&#25968;&#25454;</span>
+<span style="font-style: italic;">     * </span><span style="font-weight: bold; font-style: italic; text-decoration: underline;">@throw</span><span style="font-style: italic;"> &#21487;&#20197;&#25243;&#20986;&#24322;&#24120;&#65292;&#24322;&#24120;&#23558;&#23548;&#33268;&#32456;&#27490;&#25509;&#25910;&#25968;&#25454;</span>
+<span style="font-style: italic;">     */</span>
+    <span style="font-weight: bold; text-decoration: underline;">boolean</span> <span style="font-weight: bold;">onNext</span>(<span style="font-weight: bold; text-decoration: underline;">String</span> <span style="font-weight: bold; font-style: italic;">event</span>);
+
+    <span style="font-style: italic;">/**</span>
+<span style="font-style: italic;">     * &#25910;&#21040;&#20840;&#37096;&#25968;&#25454;&#26102;&#21487;&#20197;&#25243;&#20986;&#24322;&#24120;&#65292;&#24322;&#24120;&#21457;&#29983;&#26102;&#23558;&#33258;&#21160;&#35843;&#29992;onError()</span>
+<span style="font-style: italic;">     *</span>
+<span style="font-style: italic;">     * </span><span style="font-weight: bold; font-style: italic; text-decoration: underline;">@throw</span><span style="font-style: italic;"> &#21487;&#20197;&#25243;&#20986;&#24322;&#24120;&#65292;&#24322;&#24120;&#21457;&#29983;&#26102;&#23558;&#33258;&#21160;&#35843;&#29992;onError()</span>
+<span style="font-style: italic;">     */</span>
+    <span style="font-weight: bold; text-decoration: underline;">void</span> <span style="font-weight: bold;">onComplete</span>();
+
+    <span style="font-style: italic;">/**</span>
+<span style="font-style: italic;">     * &#20986;&#38169;&#26102;&#35843;&#29992;</span>
+<span style="font-style: italic;">     *</span>
+<span style="font-style: italic;">     * </span><span style="font-weight: bold; font-style: italic; text-decoration: underline;">@throw</span><span style="font-style: italic;"> &#19981;&#33021;&#25243;&#20986;&#24322;&#24120;</span>
+<span style="font-style: italic;">     * </span><span style="font-weight: bold; font-style: italic; text-decoration: underline;">@param</span><span style="font-style: italic;"> t</span>
+<span style="font-style: italic;">     */</span>
+    <span style="font-weight: bold; text-decoration: underline;">void</span> <span style="font-weight: bold;">onError</span>(<span style="font-weight: bold; text-decoration: underline;">Throwable</span> <span style="font-weight: bold; font-style: italic;">t</span>);
+}
+</pre>
+</div>
+<p>
+onNext()返回类型为boolean, 目的是用户可以在接收过程中终止接收后续SSE event, 比如当用户处理当前event出错后可能就不再愿意处理后续event。
+上述接口中除onError()外都可以抛出异常，SSE异步客户端在实现时会恰当地处理这些异常。
+</p>
+</div>
+</div>
+<div id="outline-container-org2ec3e56" class="outline-3">
+<h3 id="org2ec3e56"><span class="section-number-3">2.4.</span> 核心实现</h3>
+<div class="outline-text-3" id="text-2-4">
+<p>
+在上述内容的基础上，可以比较直观地实现异步SSE客户端，核心逻辑如下：
+</p>
+<div class="org-src-container">
+<pre class="src src-java"><span style="font-weight: bold; text-decoration: underline;">AsyncSseCallback</span> <span style="font-weight: bold; font-style: italic;">consumer</span>;
+client.execute(
+    <span style="font-weight: bold;">new</span> <span style="font-weight: bold; text-decoration: underline;">BasicAsyncRequestProducer</span>(host, request),
+    <span style="font-weight: bold;">new</span> <span style="font-weight: bold; text-decoration: underline;">AsyncCharConsumer</span>&lt;<span style="font-weight: bold; text-decoration: underline;">Void</span>&gt;() {
+        <span style="font-weight: bold; text-decoration: underline;">@Override</span>
+        <span style="font-weight: bold;">protected</span> <span style="font-weight: bold; text-decoration: underline;">void</span> <span style="font-weight: bold;">onCharReceived</span>(<span style="font-weight: bold; text-decoration: underline;">CharBuffer</span> <span style="font-weight: bold; font-style: italic;">buf</span>, <span style="font-weight: bold; text-decoration: underline;">IOControl</span> <span style="font-weight: bold; font-style: italic;">ioControl</span>) <span style="font-weight: bold;">throws</span> <span style="font-weight: bold; text-decoration: underline;">IOException</span> {
+            parser.append(buf.toString());
+            <span style="font-weight: bold; text-decoration: underline;">String</span> <span style="font-weight: bold; font-style: italic;">next</span>;
+            <span style="font-weight: bold;">while</span> ((next = parser.next()) != <span style="font-weight: bold; text-decoration: underline;">null</span>) {
+                <span style="font-weight: bold;">try</span> {
+                    <span style="font-weight: bold;">if</span> (!consumer.onNext(next)) {
+                        ioControl.shutdown();
+                    }
+                } <span style="font-weight: bold;">catch</span> (Throwable t) {
+                    <span style="font-weight: bold; font-style: italic;">// </span><span style="font-weight: bold; font-style: italic;">client.execute()&#23558;&#35843;&#29992;FutureCallback#failed(), &#26368;&#32456;&#23558;&#35843;&#29992;consumer#fail()</span>
+                    ioControl.shutdown();
+                }
+            }
+        }
+
+        <span style="font-weight: bold; text-decoration: underline;">@Override</span>
+        <span style="font-weight: bold;">protected</span> <span style="font-weight: bold; text-decoration: underline;">void</span> <span style="font-weight: bold;">onResponseReceived</span>(<span style="font-weight: bold; text-decoration: underline;">HttpResponse</span> <span style="font-weight: bold; font-style: italic;">response</span>) <span style="font-weight: bold;">throws</span> <span style="font-weight: bold; text-decoration: underline;">HttpException</span>, <span style="font-weight: bold; text-decoration: underline;">IOException</span> {}
+
+        <span style="font-weight: bold; text-decoration: underline;">@Override</span>
+        <span style="font-weight: bold;">protected</span> <span style="font-weight: bold; text-decoration: underline;">Void</span> <span style="font-weight: bold;">buildResult</span>(<span style="font-weight: bold; text-decoration: underline;">HttpContext</span> <span style="font-weight: bold; font-style: italic;">context</span>) <span style="font-weight: bold;">throws</span> <span style="font-weight: bold; text-decoration: underline;">Exception</span> {
+            <span style="font-weight: bold;">return</span> <span style="font-weight: bold; text-decoration: underline;">null</span>;
+        }
+    }, <span style="font-weight: bold;">new</span> <span style="font-weight: bold; text-decoration: underline;">FutureCallback</span>&lt;<span style="font-weight: bold; text-decoration: underline;">Void</span>&gt;() {
+        <span style="font-weight: bold; text-decoration: underline;">@Override</span>
+        <span style="font-weight: bold;">public</span> <span style="font-weight: bold; text-decoration: underline;">void</span> <span style="font-weight: bold;">completed</span>(<span style="font-weight: bold; text-decoration: underline;">Void</span> <span style="font-weight: bold; font-style: italic;">unused</span>) {
+            <span style="font-weight: bold;">try</span> {
+                consumer.onComplete();
+            } <span style="font-weight: bold;">catch</span> (Throwable t) {
+                consumer.onError(t);
+            }
+        }
+
+        <span style="font-weight: bold; text-decoration: underline;">@Override</span>
+        <span style="font-weight: bold;">public</span> <span style="font-weight: bold; text-decoration: underline;">void</span> <span style="font-weight: bold;">failed</span>(<span style="font-weight: bold; text-decoration: underline;">Exception</span> <span style="font-weight: bold; font-style: italic;">e</span>) {
+            <span style="font-weight: bold;">try</span> {
+                consumer.onError(e);
+            } <span style="font-weight: bold;">catch</span> (Throwable t) {
+                t.printStackTrace();
+                <span style="font-weight: bold; font-style: italic;">//</span><span style="font-weight: bold; font-style: italic;">log.error("onError() should not throw exceptions", e);</span>
+            }
+        }
+
+        <span style="font-weight: bold; text-decoration: underline;">@Override</span>
+        <span style="font-weight: bold;">public</span> <span style="font-weight: bold; text-decoration: underline;">void</span> <span style="font-weight: bold;">cancelled</span>() {}
+ });
+</pre>
+</div>
+</div>
+</div>
+</div>
+<div id="outline-container-orgab5e081" class="outline-2">
+<h2 id="orgab5e081"><span class="section-number-2">3.</span> 基于Sogou Workflow的异步SSE客户端实现方法概述</h2>
+<div class="outline-text-2" id="text-3">
+<p>
+在程序的某部分采用了异步接口后，代码中将充斥着大量callback (除非其它模块对将其转为同步), 而这些callback相比同步代码而言可读性一般较差。
+Sogou Workflow提供了任务流来封装这些回调，使其可读性大为提升。
+此外，Workflow提供的异步资源管理调度能力使其很适合异步程序编写。
+因此，异步SSE客户端很适合采用Workflow来实现。
+</p>
+
+<p>
+Workflow虽然原生支持HTTP协议，但未提供SSE协议支持。
+使用Workflow来实现异步SSE客户端的几个要点如下：
+</p>
+<ol class="org-ol">
+<li>基于已实现有的HTTP协议来实现SSE.</li>
+<li>Communicator handler thread中可以拿到connection fd, 可以基于其实现连接控制，以给上层业务提供类似于HttpAsyncClient onCharReceived() IOControl的回调入参。</li>
+<li>Workflow交付的是完整的协议消息，其在语义比Proactor走得更远。
+因此，在SSE客户端实现需要注意：应该交付SSE event, 而不是完整的HTTP协议消息。</li>
+</ol>
+</div>
+</div>
+<div id="outline-container-org5757379" class="outline-2">
+<h2 id="org5757379"><span class="section-number-2">4.</span> 总结</h2>
+<div class="outline-text-2" id="text-4">
+<p>
+本文介绍了SSE协议以及其异步客户端实现方法，希望能对大家有所帮助。
+</p>
+</div>
+</div>
+
+    </div><!-- /.entry-content -->
+
+  </article>
+</section>
+        <section id="extras" class="body">
+        </section><!-- /#extras -->
+
+</body>
+</html>

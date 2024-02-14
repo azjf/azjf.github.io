@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <meta name="generator" content="Pelican" />
+        <title>浅谈Linux Futex与用户态同步机制实现原理</title>
+        <link rel="stylesheet" href="/theme/css/main.css" />
+        <meta name="description" content="1. Mutex/CondVar/Semaphore功能与实现逻辑分析 1.1. Mutex/CondVar/Semaphore功能与底层能力依赖 1.2. 原子变量与内存屏障 1.3. Kernel进程等待队列 2...." />
+
+        <style>
+          /* #content { max-width: 60em; margin: auto; } */
+          .title  { text-align: center;
+                     margin-bottom: .2em; }
+          .subtitle { text-align: center;
+                      font-size: medium;
+                      font-weight: bold;
+                      margin-top:0; }
+          .todo   { font-family: monospace; color: red; }
+          .done   { font-family: monospace; color: green; }
+          .priority { font-family: monospace; color: orange; }
+          .tag    { background-color: #eee; font-family: monospace;
+                    padding: 2px; font-size: 80%; font-weight: normal; }
+          .timestamp { color: #bebebe; }
+          .timestamp-kwd { color: #5f9ea0; }
+          .org-right  { margin-left: auto; margin-right: 0px;  text-align: right; }
+          .org-left   { margin-left: 0px;  margin-right: auto; text-align: left; }
+          .org-center { margin-left: auto; margin-right: auto; text-align: center; }
+          .underline { text-decoration: underline; }
+          #postamble p, #preamble p { font-size: 90%; margin: .2em; }
+          p.verse { margin-left: 3%; }
+          pre {
+            border: 1px solid #e6e6e6;
+            border-radius: 3px;
+            background-color: #f2f2f2;
+            padding: 8pt;
+            font-family: monospace;
+            overflow: auto;
+            margin: 1.2em;
+          }
+          pre.src {
+            position: relative;
+            overflow: auto;
+          }
+          pre.src:before {
+            display: none;
+            position: absolute;
+            top: -8px;
+            right: 12px;
+            padding: 3px;
+            color: #555;
+            background-color: #f2f2f299;
+          }
+          pre.src:hover:before { display: inline; margin-top: 14px;}
+          /* Languages per Org manual */
+          pre.src-asymptote:before { content: 'Asymptote'; }
+          pre.src-awk:before { content: 'Awk'; }
+          pre.src-authinfo::before { content: 'Authinfo'; }
+          pre.src-C:before { content: 'C'; }
+          /* pre.src-C++ doesn't work in CSS */
+          pre.src-clojure:before { content: 'Clojure'; }
+          pre.src-css:before { content: 'CSS'; }
+          pre.src-D:before { content: 'D'; }
+          pre.src-ditaa:before { content: 'ditaa'; }
+          pre.src-dot:before { content: 'Graphviz'; }
+          pre.src-calc:before { content: 'Emacs Calc'; }
+          pre.src-emacs-lisp:before { content: 'Emacs Lisp'; }
+          pre.src-fortran:before { content: 'Fortran'; }
+          pre.src-gnuplot:before { content: 'gnuplot'; }
+          pre.src-haskell:before { content: 'Haskell'; }
+          pre.src-hledger:before { content: 'hledger'; }
+          pre.src-java:before { content: 'Java'; }
+          pre.src-js:before { content: 'Javascript'; }
+          pre.src-latex:before { content: 'LaTeX'; }
+          pre.src-ledger:before { content: 'Ledger'; }
+          pre.src-lisp:before { content: 'Lisp'; }
+          pre.src-lilypond:before { content: 'Lilypond'; }
+          pre.src-lua:before { content: 'Lua'; }
+          pre.src-matlab:before { content: 'MATLAB'; }
+          pre.src-mscgen:before { content: 'Mscgen'; }
+          pre.src-ocaml:before { content: 'Objective Caml'; }
+          pre.src-octave:before { content: 'Octave'; }
+          pre.src-org:before { content: 'Org mode'; }
+          pre.src-oz:before { content: 'OZ'; }
+          pre.src-plantuml:before { content: 'Plantuml'; }
+          pre.src-processing:before { content: 'Processing.js'; }
+          pre.src-python:before { content: 'Python'; }
+          pre.src-R:before { content: 'R'; }
+          pre.src-ruby:before { content: 'Ruby'; }
+          pre.src-sass:before { content: 'Sass'; }
+          pre.src-scheme:before { content: 'Scheme'; }
+          pre.src-screen:before { content: 'Gnu Screen'; }
+          pre.src-sed:before { content: 'Sed'; }
+          pre.src-sh:before { content: 'shell'; }
+          pre.src-sql:before { content: 'SQL'; }
+          pre.src-sqlite:before { content: 'SQLite'; }
+          /* additional languages in org.el's org-babel-load-languages alist */
+          pre.src-forth:before { content: 'Forth'; }
+          pre.src-io:before { content: 'IO'; }
+          pre.src-J:before { content: 'J'; }
+          pre.src-makefile:before { content: 'Makefile'; }
+          pre.src-maxima:before { content: 'Maxima'; }
+          pre.src-perl:before { content: 'Perl'; }
+          pre.src-picolisp:before { content: 'Pico Lisp'; }
+          pre.src-scala:before { content: 'Scala'; }
+          pre.src-shell:before { content: 'Shell Script'; }
+          pre.src-ebnf2ps:before { content: 'ebfn2ps'; }
+          /* additional language identifiers per "defun org-babel-execute"
+               in ob-*.el */
+          pre.src-cpp:before  { content: 'C++'; }
+          pre.src-abc:before  { content: 'ABC'; }
+          pre.src-coq:before  { content: 'Coq'; }
+          pre.src-groovy:before  { content: 'Groovy'; }
+          /* additional language identifiers from org-babel-shell-names in
+             ob-shell.el: ob-shell is the only babel language using a lambda to put
+             the execution function name together. */
+          pre.src-bash:before  { content: 'bash'; }
+          pre.src-csh:before  { content: 'csh'; }
+          pre.src-ash:before  { content: 'ash'; }
+          pre.src-dash:before  { content: 'dash'; }
+          pre.src-ksh:before  { content: 'ksh'; }
+          pre.src-mksh:before  { content: 'mksh'; }
+          pre.src-posh:before  { content: 'posh'; }
+          /* Additional Emacs modes also supported by the LaTeX listings package */
+          pre.src-ada:before { content: 'Ada'; }
+          pre.src-asm:before { content: 'Assembler'; }
+          pre.src-caml:before { content: 'Caml'; }
+          pre.src-delphi:before { content: 'Delphi'; }
+          pre.src-html:before { content: 'HTML'; }
+          pre.src-idl:before { content: 'IDL'; }
+          pre.src-mercury:before { content: 'Mercury'; }
+          pre.src-metapost:before { content: 'MetaPost'; }
+          pre.src-modula-2:before { content: 'Modula-2'; }
+          pre.src-pascal:before { content: 'Pascal'; }
+          pre.src-ps:before { content: 'PostScript'; }
+          pre.src-prolog:before { content: 'Prolog'; }
+          pre.src-simula:before { content: 'Simula'; }
+          pre.src-tcl:before { content: 'tcl'; }
+          pre.src-tex:before { content: 'TeX'; }
+          pre.src-plain-tex:before { content: 'Plain TeX'; }
+          pre.src-verilog:before { content: 'Verilog'; }
+          pre.src-vhdl:before { content: 'VHDL'; }
+          pre.src-xml:before { content: 'XML'; }
+          pre.src-nxml:before { content: 'XML'; }
+          /* add a generic configuration mode; LaTeX export needs an additional
+             (add-to-list 'org-latex-listings-langs '(conf " ")) in .emacs */
+          pre.src-conf:before { content: 'Configuration File'; }
+
+          table { border-collapse:collapse; }
+          caption.t-above { caption-side: top; }
+          caption.t-bottom { caption-side: bottom; }
+          td, th { vertical-align:top;  }
+          th.org-right  { text-align: center;  }
+          th.org-left   { text-align: center;   }
+          th.org-center { text-align: center; }
+          td.org-right  { text-align: right;  }
+          td.org-left   { text-align: left;   }
+          td.org-center { text-align: center; }
+          dt { font-weight: bold; }
+          .footpara { display: inline; }
+          .footdef  { margin-bottom: 1em; }
+          .figure { padding: 1em; }
+          .figure p { text-align: center; }
+          .equation-container {
+            display: table;
+            text-align: center;
+            width: 100%;
+          }
+          .equation {
+            vertical-align: middle;
+          }
+          .equation-label {
+            display: table-cell;
+            text-align: right;
+            vertical-align: middle;
+          }
+          .inlinetask {
+            padding: 10px;
+            border: 2px solid gray;
+            margin: 10px;
+            background: #ffffcc;
+          }
+          #org-div-home-and-up
+           { text-align: right; font-size: 70%; white-space: nowrap; }
+          textarea { overflow-x: auto; }
+          .linenr { font-size: smaller }
+          .code-highlighted { background-color: #ffff00; }
+          .org-info-js_info-navigation { border-style: none; }
+          #org-info-js_console-label
+            { font-size: 10px; font-weight: bold; white-space: nowrap; }
+          .org-info-js_search-highlight
+            { background-color: #ffff00; color: #000000; font-weight: bold; }
+          .org-svg { }
+        </style>
+
+        <script>
+          window.MathJax = {
+            tex: {
+              ams: {
+                multlineWidth: '85%'
+              },
+              tags: 'ams',
+              tagSide: 'right',
+              tagIndent: '.8em'
+            },
+            chtml: {
+              scale: 1.0,
+              displayAlign: 'center',
+              displayIndent: '0em'
+            },
+            svg: {
+              scale: 1.0,
+              displayAlign: 'center',
+              displayIndent: '0em'
+            },
+            output: {
+              font: 'mathjax-modern',
+              displayOverflow: 'overflow'
+            }
+          };
+        </script>
+
+        <script
+          id="MathJax-script"
+          async
+          src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js">
+        </script>
+</head>
+
+<body id="index" class="home">
+        <header id="banner" class="body">
+                <nav><ul>
+                    <li><a href="/">首页</a></li>
+                    <li><a href="/categories.html">分类</a></li>
+                    <li><a href="/tags.html">标签</a></li>
+                    <li><a href="/archives.html">归档</a></li>
+                    <li><a href="https://github.com/azjf">关于</a></li>
+                </ul></nav>
+        </header><!-- /#banner -->
+<section id="content" class="body">
+  <article>
+    <header>
+      <h1 class="entry-title">
+        <a href="/futex.html" rel="bookmark"
+           title="Permalink to 浅谈Linux Futex与用户态同步机制实现原理">浅谈Linux Futex与用户态同步机制实现原理</a></h1>
+    </header>
+
+    <div class="entry-content">
+<footer class="post-info">
+        <abbr class="published" title="2025-05-24T00:00:00+08:00">
+                2025-05-24
+        </abbr>
+<p>分类: <a href="/category/linux.html">Linux</a></p>
+标签: <a href="/tag/linux.html">Linux</a> <a href="/tag/futex.html">Futex</a> <a href="/tag/mutex.html">Mutex</a> <a href="/tag/conditional-variable.html">Conditional Variable</a> <a href="/tag/semaphore.html">Semaphore</a> <a href="/tag/hu-chi-suo.html">互斥锁</a> <a href="/tag/tiao-jian-bian-liang.html">条件变量</a> <a href="/tag/xin-hao-liang.html">信号量</a> 
+</footer><!-- /.post-info -->      <div id="table-of-contents" role="doc-toc">
+
+<div id="text-table-of-contents" role="doc-toc">
+<ul>
+<li><a href="#orgbd44d79">1. Mutex/CondVar/Semaphore功能与实现逻辑分析</a>
+<ul>
+<li><a href="#org17ba824">1.1. Mutex/CondVar/Semaphore功能与底层能力依赖</a></li>
+<li><a href="#orgeb8c48f">1.2. 原子变量与内存屏障</a></li>
+<li><a href="#org481bde8">1.3. Kernel进程等待队列</a></li>
+</ul>
+</li>
+<li><a href="#org5c555d5">2. 基于Futex的Mutex/CondVar实现原理与Demo</a>
+<ul>
+<li><a href="#orgf7b1d0e">2.1. Futex简介</a></li>
+<li><a href="#orgd2a3503">2.2. Mutex实现原理</a></li>
+<li><a href="#org693f328">2.3. CondVar实现原理</a></li>
+<li><a href="#org421f55f">2.4. Semaphore实现原理</a></li>
+</ul>
+</li>
+<li><a href="#org04cfe5b">3. 参考文档</a></li>
+</ul>
+</div>
+</div>
+<p>
+Linux下用户态同步机制主要包括互斥锁mutex/信号量semaphore和条件变量condvar (conditional variable)及其各种变体，其可以让用户态程序避免线程/进程数据竞争。
+用户态线程同步API一般由libpthread提供，而libpthread则是在kernel futex (Fast Userspace muTEX)系统调用的基础上实现的。
+</p>
+
+<p>
+本文仅浅谈mutex/condvar/semaphore的实现原理（不会深入地分析libphread和futex的实现细节），希望能以较短篇幅揭开同步机制实现原理的神秘面纱。
+</p>
+<div id="outline-container-orgbd44d79" class="outline-2">
+<h2 id="orgbd44d79"><span class="section-number-2">1.</span> Mutex/CondVar/Semaphore功能与实现逻辑分析</h2>
+<div class="outline-text-2" id="text-1">
+<p>
+我们先分析一下mutex/condvar/semaphore的功能和理论实现逻辑，然后简要介绍其依赖的底层能力的实现原理。
+</p>
+</div>
+<div id="outline-container-org17ba824" class="outline-3">
+<h3 id="org17ba824"><span class="section-number-3">1.1.</span> Mutex/CondVar/Semaphore功能与底层能力依赖</h3>
+<div class="outline-text-3" id="text-1-1">
+<p>
+Mutex被用于实现多个线程对资源的互斥访问，当资源被别的线程占用时，mutex需要挂起当前线程；而当使用完资源后，mutex需要唤醒其它因等待该mutex而被挂起的线程。
+因此，实现mutex需要依赖两种能力：
+</p>
+<ol class="org-ol">
+<li>资源互斥访问：对任何资源的互斥访问本质上可以被转化为可以对一个flag的互斥访问，而这可以由硬件提供的原子变量和内存屏障来实现。</li>
+<li>线程挂起与唤醒：进程/线程挂起和唤醒是操作系统概念，挂起的本质上为将相应线程状态设置为阻塞状态后再将其放入某个kernel等待队列，而唤醒操作则是其反向操作，因此这都是由kernel提供的能力。</li>
+</ol>
+<p>
+在这两个能力中，基于原子变量和内存屏障的互斥访问是硬件提供的，无需OS支持。
+</p>
+
+<p>
+CondVar可以实现让一个线程唤醒阻塞在某个条件上的其它线程。
+​<b>虽然mutex.unlock()也可以唤醒其它阻塞在mutex上的线程，但是线程在执行mutex.unlock()前必须持有mutex, 也就是执行过mutex.lock(), 因此mutex无法让某个阻塞在mutex上的线程被别的未持有该mutex的线程唤醒。CondVar没有这个限制，线程在condvar.notify()之前无需执行condvar.wait(), 因此可以让一个线程唤醒阻塞在condvar上的其它线程。</b>​
+CondVar被用于实现协调具有依赖关系的多个线程之间，其可以让线程阻塞在某个未被满足的条件上，该条件最终将被其它线程实现，而该等待线程也将会被条件完成者唤醒。
+例如，阻塞队列通常就是基于condvar实现的，队列生产者与消费者线程通过condvar来实现队列已满或已空时的相互等待。
+CondVar的使用场景为多个线程需要互斥访问某块资源，而这些线程在实际操作资源前需要等待其它线程先对该资源进行一些前置处理。
+因此，​<b>线程在检查资源并等待某个condvar之前需要持有某个mutex (其它线程可能并发访问该资源), 在等待condvar期间时需要自动解锁该mutex (否则其它线程将无法修改该资源), 并且在被condvar唤醒后会再次自动尝试获取该mutex (确保线程被唤醒后独享该资源)</b>​.
+CondVar和mutex使用场景的主要区别在于，mutex场景中间各线程间无依赖关系，而condvar场景中某些线程会依赖别的线程。
+从CondVar的功能上可以看出，condvar不依赖互斥能力，而仅依赖OS等待队列提供的线程挂起和唤醒能力。
+</p>
+
+<p>
+Semaphore是兼具mutex和condvar功能的同步原语，其可以实现仅允许指定数量线程同时访问某块资源。
+Mutex可以看作其互斥版，但是，​<b>mutex仅能被锁持有线程释放，而semaphore则允许被其它线程释放，这个能力也使得其可以被当作condvar来让一个线程唤醒其它线程</b>​。
+</p>
+</div>
+</div>
+<div id="outline-container-orgeb8c48f" class="outline-3">
+<h3 id="orgeb8c48f"><span class="section-number-3">1.2.</span> 原子变量与内存屏障</h3>
+<div class="outline-text-3" id="text-1-2">
+<p>
+​<b>免责声明：本小节内容可能有不少错误，请慎用。</b>​
+</p>
+
+<p>
+当原子变量在被多个线程读写时，只有一个线程能获得其读写权，并且其读写过程不会被其它线程干扰，其它线程也只能看到读写前和读写后的结果（一致性），其比较严格的定义可以参考<a href="https://en.cppreference.com/w/c/language/atomic.html">C11 stdatomic.h atomic<sub>int说明文档</sub></a>.
+原子变量实现方法依赖硬件平台，X86提供了lock指令来锁总线以禁止并发，ARM则提供ldadd指令。
+也就是说，​<b>原子变量本质上也只是普通的内存块，只是其被操作时使用的是特殊的读写指令</b>​。
+关于atomic<sub>int的汇编实现</sub>，可以参考<a href="https://stackoverflow.com/questions/31978324/what-exactly-is-stdatomic/58904448">https://stackoverflow.com/questions/31978324/what-exactly-is-stdatomic/58904448</a>.
+</p>
+
+<p>
+​<b>悲观锁mutex和乐观锁CAS在底层逻辑上都依赖tryLock逻辑，其需要确保并发时只有一个线程能够成功修改锁原子变量</b>​，而这需要依赖类似于X86平台​<b>cmpxchg</b>​的特殊硬件指令，下面将仅以X86为例分析具体原因。
+在多核CPU中，为了实现tryLock逻辑，​<b>硬件必须提供cmpxchg, 而不能通过用cmp + xchg来替代，因为在cmp和xchg之间，别的CPU核可能会改变原子变量状态</b>​。
+此外，还需要给cmpxchg加上lock prefix, 以确保其它线程不会操作原子变量内存块。
+</p>
+
+<p>
+仅有原子变量是不够的，因为现代CPU具有缓存和乱序执行能力，这可能导致某些线程获取到的缓存中的无效原子变量。
+另外，编译器在代码生成优化阶段也可能会“缓存数据”（依赖寄存器缓存值而不直接从内存去数据）和重排指令，也会导致同样的问题。
+为了解决这些问题，CPU和编译器都提供了相应支持：
+</p>
+<ol class="org-ol">
+<li>针对CPU缓存数据和重排指令，X86等硬件平台提供了mfence/lfence/sfence之类指令，其可以保证该指令之前的指令的执行时间一定先于该指令之后的其它指令，并且还会刷新缓存以保证操作的是主内存中的最新数据。</li>
+<li>针对编译器缓存数据和重排指令，C语言提供了volatile关键字，<a href="https://gcc.gnu.org/onlinedocs/gcc/Volatiles.html">GCC等编译器的volatile实现会避免这些行为</a>. Java也提供了类似的volatile关键字，其实现时还会插入mfence等指令以避免CPU指令重排。</li>
+</ol>
+<p>
+GCC提供的<a href="https://gcc.gnu.org/onlinedocs/gcc/_005f_005fatomic-Builtins.html">_<sub>atomic系列内置函数</sub></a>在保证原子性的同时还会执行mfence等指令以保证内存顺序，C++11也规范了<a href="https://people.cs.pitt.edu/~xianeizhang/notes/cpp11_mem.html">内存模型</a>来解决这些问题。
+</p>
+</div>
+</div>
+<div id="outline-container-org481bde8" class="outline-3">
+<h3 id="org481bde8"><span class="section-number-3">1.3.</span> Kernel进程等待队列</h3>
+<div class="outline-text-3" id="text-1-3">
+<p>
+Kernel进程等待队列本质上是通过设置进程调度状态为Interruptible/Uninterruptible Sleep来实现的。
+Kernel进程调度器仅会给Running/Runnable状态的进程分配时间片，因此等待队列中的进程都不会被调度执行。
+操作系统教材都会讲述Kernel进程调度相关知识，这里就不赘述了。
+</p>
+</div>
+</div>
+</div>
+<div id="outline-container-org5c555d5" class="outline-2">
+<h2 id="org5c555d5"><span class="section-number-2">2.</span> 基于Futex的Mutex/CondVar实现原理与Demo</h2>
+<div class="outline-text-2" id="text-2">
+</div>
+<div id="outline-container-orgf7b1d0e" class="outline-3">
+<h3 id="orgf7b1d0e"><span class="section-number-3">2.1.</span> Futex简介</h3>
+<div class="outline-text-3" id="text-2-1">
+<p>
+Kernel内部实现有mutex/semaphore，理论上可以将作为系统调用syscall提供给用户态程序使用，但是这样做的话效率不高，原因如下：
+</p>
+<ol class="org-ol">
+<li>系统调是有代价的，因为其执行时需要将上下文从用户态切换到内核态。</li>
+<li>Mutex等同步机制在lock阶段首先需要检测原子变量值，然后仅当原子变量值不符合要求时，才进入内核态以将当前进程挂入等待队列。</li>
+<li>前面分析过，mutex/semaphore理论实现上仅等待队列部分需要kernel支持，而原子变量和内存屏障部分在用户态也能通过执行相关硬件指令而实现。
+因此，当原子变量值符合要求时，进入内核态后在检测之就会很不划算，而将kernel mutex内部实现作为syscall提供给用户程序的方法却需要在进入内核态后再检测原子变量，因此效率不高。</li>
+</ol>
+
+<p>
+Futex (Fast Userspace muTEX)则是在用户态保存并检测mutex等所需的原子变量，其仅在需要时才执行futex syscall以进入内核态来使用kernel提供的等待队列功能，因此效率很高，而这也是futex名称中f (fast)的来源。
+因此，目前用户态线程同步API所依赖的libpthread mutex/condvar/semaphore都是基于futex实现的。
+</p>
+
+<p>
+Futex syscall基础版原型如下，其可以被传入用户态锁原子变量：
+</p>
+<div class="org-src-container">
+<pre class="src src-c"><span style="font-weight: bold; text-decoration: underline;">int</span> <span style="font-weight: bold;">futex_wait</span>(<span style="font-weight: bold; text-decoration: underline;">int</span> *<span style="font-weight: bold; font-style: italic;">uaddr</span>, <span style="font-weight: bold; text-decoration: underline;">int</span> <span style="font-weight: bold; font-style: italic;">val</span>); <span style="font-weight: bold; font-style: italic;">// </span><span style="font-weight: bold; font-style: italic;">&#24403;*uaddr == val&#26102; (cmpxchg / CAS)&#65292;&#22312;uaddr&#25152;&#25351;&#38145;&#21407;&#23376;&#21464;&#37327;&#19978;&#31561;&#24453;</span>
+<span style="font-weight: bold; text-decoration: underline;">int</span> <span style="font-weight: bold;">futex_wake</span>(<span style="font-weight: bold; text-decoration: underline;">int</span> *<span style="font-weight: bold; font-style: italic;">uaddr</span>, <span style="font-weight: bold; text-decoration: underline;">int</span> <span style="font-weight: bold; font-style: italic;">n</span>); <span style="font-weight: bold; font-style: italic;">// </span><span style="font-weight: bold; font-style: italic;">&#21796;&#37266;n&#20010;&#22312;uaddr&#25152;&#25351;&#38145;&#21407;&#23376;&#21464;&#37327;&#19978;&#31561;&#24453;&#30340;&#36827;&#31243;</span>
+</pre>
+</div>
+<p>
+此外，futex还有其它几个版本，其原型和功能如下：
+</p>
+<div class="org-src-container">
+<pre class="src src-c"><span style="font-weight: bold; font-style: italic;">// </span><span style="font-weight: bold; font-style: italic;">bitset&#21487;&#20197;&#34987;&#29992;&#20110;&#23454;&#29616;&#36229;&#26102;&#21644;&#35835;&#20889;&#38145;</span>
+<span style="font-weight: bold; text-decoration: underline;">int</span> <span style="font-weight: bold;">futex_wait_bitset</span>(<span style="font-weight: bold; text-decoration: underline;">int</span> *<span style="font-weight: bold; font-style: italic;">uaddr</span>, <span style="font-weight: bold; text-decoration: underline;">int</span> <span style="font-weight: bold; font-style: italic;">val</span>, <span style="font-weight: bold; text-decoration: underline;">int</span> <span style="font-weight: bold; font-style: italic;">bitset</span>);
+<span style="font-weight: bold; text-decoration: underline;">int</span> <span style="font-weight: bold;">futex_wake_bitset</span>(<span style="font-weight: bold; text-decoration: underline;">int</span> *<span style="font-weight: bold; font-style: italic;">uaddr</span>, <span style="font-weight: bold; text-decoration: underline;">int</span> <span style="font-weight: bold; font-style: italic;">n</span>, <span style="font-weight: bold; text-decoration: underline;">int</span> <span style="font-weight: bold; font-style: italic;">bitset</span>);
+<span style="font-weight: bold; font-style: italic;">// </span><span style="font-weight: bold; font-style: italic;">&#21487;&#34987;&#29992;&#20110;&#23454;&#29616;condvar</span>
+<span style="font-weight: bold; text-decoration: underline;">int</span> <span style="font-weight: bold;">futex_requeue</span>(<span style="font-weight: bold; text-decoration: underline;">int</span> *<span style="font-weight: bold; font-style: italic;">uaddr</span>, <span style="font-weight: bold; text-decoration: underline;">int</span> <span style="font-weight: bold; font-style: italic;">n</span>, <span style="font-weight: bold; text-decoration: underline;">int</span> *<span style="font-weight: bold; font-style: italic;">uaddr2</span>, <span style="font-weight: bold; text-decoration: underline;">int</span> <span style="font-weight: bold; font-style: italic;">n2</span>);
+<span style="font-weight: bold; text-decoration: underline;">int</span> <span style="font-weight: bold;">futex_cmp_requeue</span>(<span style="font-weight: bold; text-decoration: underline;">int</span> *<span style="font-weight: bold; font-style: italic;">uaddr</span>, <span style="font-weight: bold; text-decoration: underline;">int</span> <span style="font-weight: bold; font-style: italic;">n</span>, <span style="font-weight: bold; text-decoration: underline;">int</span> *<span style="font-weight: bold; font-style: italic;">uaddr2</span>, <span style="font-weight: bold; text-decoration: underline;">int</span> <span style="font-weight: bold; font-style: italic;">n2</span>, <span style="font-weight: bold; text-decoration: underline;">int</span> <span style="font-weight: bold; font-style: italic;">val</span>);
+</pre>
+</div>
+<p>
+最后，futex还有Priority Inheritance系列等其它版本，本文暂不讨论之。
+</p>
+</div>
+</div>
+<div id="outline-container-orgd2a3503" class="outline-3">
+<h3 id="orgd2a3503"><span class="section-number-3">2.2.</span> Mutex实现原理</h3>
+</div>
+
+<div id="outline-container-org693f328" class="outline-3">
+<h3 id="org693f328"><span class="section-number-3">2.3.</span> CondVar实现原理</h3>
+</div>
+
+<div id="outline-container-org421f55f" class="outline-3">
+<h3 id="org421f55f"><span class="section-number-3">2.4.</span> Semaphore实现原理</h3>
+</div>
+</div>
+<div id="outline-container-org04cfe5b" class="outline-2">
+<h2 id="org04cfe5b"><span class="section-number-2">3.</span> 参考文档</h2>
+<div class="outline-text-2" id="text-3">
+<ol class="org-ol">
+<li><a href="https://stackoverflow.com/questions/33431953/how-is-conditional-wait-implemented-at-the-kernel-and-hardware-assembly-level">https://stackoverflow.com/questions/33431953/how-is-conditional-wait-implemented-at-the-kernel-and-hardware-assembly-level</a></li>
+<li><a href="https://en.cppreference.com/w/c/language/atomic.html">https://en.cppreference.com/w/c/language/atomic.html</a></li>
+<li><a href="https://stackoverflow.com/questions/31978324/what-exactly-is-stdatomic/58904448">https://stackoverflow.com/questions/31978324/what-exactly-is-stdatomic/58904448</a></li>
+<li><a href="https://gcc.gnu.org/onlinedocs/gcc/_005f_005fatomic-Builtins.html">https://gcc.gnu.org/onlinedocs/gcc/_005f_005fatomic-Builtins.html</a></li>
+<li><a href="https://people.cs.pitt.edu/~xianeizhang/notes/cpp11_mem.html">https://people.cs.pitt.edu/~xianeizhang/notes/cpp11_mem.html</a></li>
+<li><a href="https://blog.sina.com.cn/s/blog_e59371cc0102v29b.html">Linux Futex浅析</a></li>
+</ol>
+</div>
+</div>
+
+    </div><!-- /.entry-content -->
+
+  </article>
+</section>
+        <section id="extras" class="body">
+        </section><!-- /#extras -->
+
+</body>
+</html>

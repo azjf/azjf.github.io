@@ -4,8 +4,9 @@
         <meta charset="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
         <meta name="generator" content="Pelican" />
-        <title>AZJF的博客</title>
+        <title>浅谈std::list::sort()实现原理</title>
         <link rel="stylesheet" href="/theme/css/main.css" />
+        <meta name="description" content="1. 算法实现 2. 参考文档 GCC STL源自SGI STL, 其使用的std::sort()使用的算法为quick sort / insert sort / heap sort的综合体，而这些算法都有随机访问元素的需求 …" />
 
         <style>
           /* #content { max-width: 60em; margin: auto; } */
@@ -236,97 +237,121 @@
                     <li><a href="https://github.com/azjf">关于</a></li>
                 </ul></nav>
         </header><!-- /#banner -->
-            <section id="content" class="body">
-                <ol id="posts-list" class="hfeed">
-        <li><article class="hentry">
-            <header>
-                <h1><a href="/futex.html" rel="bookmark"
-                       title="Permalink to 浅谈Linux Futex与用户态同步机制实现原理">浅谈Linux Futex与用户态同步机制实现原理</a></h1>
-            </header>
-            2025-05-24
-            | 分类: <a href="/category/linux.html">Linux</a>
-            | 标签: <a href="/tag/linux.html">Linux</a> <a href="/tag/futex.html">Futex</a> <a href="/tag/mutex.html">Mutex</a> <a href="/tag/conditional-variable.html">Conditional Variable</a> <a href="/tag/semaphore.html">Semaphore</a> <a href="/tag/hu-chi-suo.html">互斥锁</a> <a href="/tag/tiao-jian-bian-liang.html">条件变量</a> <a href="/tag/xin-hao-liang.html">信号量</a>         </article></li>
-        <li><article class="hentry">
-            <header>
-                <h1><a href="/sse.html" rel="bookmark"
-                       title="Permalink to Server-Sent Events (SSE)异步客户端实现">Server-Sent Events (SSE)异步客户端实现</a></h1>
-            </header>
-            2025-05-18
-            | 分类: <a href="/category/network.html">Network</a>
-            | 标签: <a href="/tag/network.html">Network</a> <a href="/tag/server-sent-events-sse.html">Server-Sent Events (SSE)</a> <a href="/tag/async-sse-client.html">Async SSE Client</a> <a href="/tag/yi-bu-sseke-hu-duan.html">异步SSE客户端</a>         </article></li>
-        <li><article class="hentry">
-            <header>
-                <h1><a href="/emacs_gdb.html" rel="bookmark"
-                       title="Permalink to Emacs GDB配置">Emacs GDB配置</a></h1>
-            </header>
-            2025-03-18
-            | 分类: <a href="/category/kai-fa-gong-ju.html">开发工具</a>
-            | 标签: <a href="/tag/kai-fa-gong-ju.html">开发工具</a> <a href="/tag/emacs.html">Emacs</a> <a href="/tag/gdb.html">GDB</a> <a href="/tag/gud-mode.html">GUD Mode</a>         </article></li>
-        <li><article class="hentry">
-            <header>
-                <h1><a href="/elfshim.html" rel="bookmark"
-                       title="Permalink to Android ROM移植: 记一次dlopen failed: cannot locate symbol解决过程">Android ROM移植: 记一次dlopen failed: cannot locate symbol解决过程</a></h1>
-            </header>
-            2025-01-12
-            | 分类: <a href="/category/android.html">Android</a>
-            | 标签: <a href="/tag/android.html">Android</a> <a href="/tag/dlopen-failed.html">dlopen failed</a> <a href="/tag/objdump.html">objdump</a> <a href="/tag/patchelf.html">patchelf</a>         </article></li>
-        <li><article class="hentry">
-            <header>
-                <h1><a href="/design_pattern.html" rel="bookmark"
-                       title="Permalink to 浅谈设计模式">浅谈设计模式</a></h1>
-            </header>
-            2024-07-14
-            | 分类: <a href="/category/design.html">Design</a>
-            | 标签: <a href="/tag/design.html">Design</a> <a href="/tag/design-pattern.html">Design Pattern</a> <a href="/tag/she-ji-mo-shi.html">设计模式</a>         </article></li>
-        <li><article class="hentry">
-            <header>
-                <h1><a href="/cpp_stl_list_sort.html" rel="bookmark"
-                       title="Permalink to 浅谈std::list::sort()实现原理">浅谈std::list::sort()实现原理</a></h1>
-            </header>
-            2024-05-05
-            | 分类: <a href="/category/c.html">C++</a>
-            | 标签: <a href="/tag/c.html">C++</a> <a href="/tag/stl.html">STL</a> <a href="/tag/list-sort.html">list sort</a> <a href="/tag/merge-sort.html">merge sort</a> <a href="/tag/gui-bing-pai-xu.html">归并排序</a>         </article></li>
-        <li><article class="hentry">
-            <header>
-                <h1><a href="/cpp_template_argument_constraint.html" rel="bookmark"
-                       title="Permalink to 浅谈C++模板参数类型约束">浅谈C++模板参数类型约束</a></h1>
-            </header>
-            2024-04-21
-            | 分类: <a href="/category/c.html">C++</a>
-            | 标签: <a href="/tag/c.html">C++</a> <a href="/tag/template.html">Template</a> <a href="/tag/template-argument-constraint.html">Template Argument Constraint</a> <a href="/tag/sfinae.html">SFINAE</a> <a href="/tag/enable_if.html">enable_if</a> <a href="/tag/concept.html">Concept</a> <a href="/tag/mo-ban-can-shu-lei-xing-yue-shu.html">模板参数类型约束</a>         </article></li>
-        <li><article class="hentry">
-            <header>
-                <h1><a href="/cpp_type_deduction.html" rel="bookmark"
-                       title="Permalink to 浅谈C++类型推导">浅谈C++类型推导</a></h1>
-            </header>
-            2024-04-14
-            | 分类: <a href="/category/c.html">C++</a>
-            | 标签: <a href="/tag/c.html">C++</a> <a href="/tag/type-deduction.html">Type Deduction</a> <a href="/tag/template-argument-type-deduction.html">Template Argument Type Deduction</a> <a href="/tag/auto.html">auto</a> <a href="/tag/decltype.html">decltype</a> <a href="/tag/lei-xing-tui-dao.html">类型推导</a> <a href="/tag/mo-ban-can-shu-lei-xing-tui-dao.html">模板参数类型推导</a>         </article></li>
-        <li><article class="hentry">
-            <header>
-                <h1><a href="/cpp_rvalue.html" rel="bookmark"
-                       title="Permalink to 浅谈C++右值/Universal引用和std::move/forward()实现原理">浅谈C++右值/Universal引用和std::move/forward()实现原理</a></h1>
-            </header>
-            2024-04-06
-            | 分类: <a href="/category/c.html">C++</a>
-            | 标签: <a href="/tag/c.html">C++</a> <a href="/tag/rvalue.html">RValue</a> <a href="/tag/move-semantics.html">Move Semantics</a> <a href="/tag/universal-reference.html">Universal Reference</a> <a href="/tag/stdmove.html">std::move()</a> <a href="/tag/stdforward.html">std::forward()</a> <a href="/tag/you-zhi.html">右值</a> <a href="/tag/yi-dong-yu-yi.html">移动语义</a> <a href="/tag/universalyin-yong.html">Universal引用</a>         </article></li>
-        <li><article class="hentry">
-            <header>
-                <h1><a href="/cpp_vs_java.html" rel="bookmark"
-                       title="Permalink to C++和Java特性对比">C++和Java特性对比</a></h1>
-            </header>
-            2024-03-03
-            | 分类: <a href="/category/c.html">C++</a>
-            | 标签: <a href="/tag/c.html">C++</a> <a href="/tag/java.html">Java</a>         </article></li>
-                </ol><!-- /#posts-list -->
-  <nav>
-    <ul>
-      <li>Page 1 / 2</li>
-        <li><a href="/index2.html">&rang;</a></li>
-        <li><a href="/index2.html">&Rang;</a></li>
-    </ul>
-  </nav>
-                </section><!-- /#content -->
+<section id="content" class="body">
+  <article>
+    <header>
+      <h1 class="entry-title">
+        <a href="/cpp_stl_list_sort.html" rel="bookmark"
+           title="Permalink to 浅谈std::list::sort()实现原理">浅谈std::list::sort()实现原理</a></h1>
+    </header>
+
+    <div class="entry-content">
+<footer class="post-info">
+        <abbr class="published" title="2024-05-05T00:00:00+08:00">
+                2024-05-05
+        </abbr>
+<p>分类: <a href="/category/c.html">C++</a></p>
+标签: <a href="/tag/c.html">C++</a> <a href="/tag/stl.html">STL</a> <a href="/tag/list-sort.html">list sort</a> <a href="/tag/merge-sort.html">merge sort</a> <a href="/tag/gui-bing-pai-xu.html">归并排序</a> 
+</footer><!-- /.post-info -->      <div id="table-of-contents" role="doc-toc">
+
+<div id="text-table-of-contents" role="doc-toc">
+<ul>
+<li><a href="#orge611f8f">1. 算法实现</a></li>
+<li><a href="#orgbc7af12">2. 参考文档</a></li>
+</ul>
+</div>
+</div>
+<p>
+GCC STL源自SGI STL, 其使用的std::sort()使用的算法为quick sort / insert sort / heap sort的综合体，而这些算法都有随机访问元素的需求，因此其要求的入参迭代器类型为RandomAccessIterator.
+而list itertor为BidirectionalIterator, 因此不能满足std::sort()的需求。
+list提供了一个成员版sort()算法，其本质上是一种bottom-up merge sort (侯捷STL源码剖析 P142中的quick sort说法有误), 本文接下来将对其<a href="https://github.com/gcc-mirror/gcc/blob/releases/gcc-12.2.0/libstdc%2B%2B-v3/include/bits/list.tcc#L479">GCC 12.2.0版代码</a>进行分析，希望能对大家有所帮助。
+</p>
+<div id="outline-container-orge611f8f" class="outline-2">
+<h2 id="orge611f8f"><span class="section-number-2">1.</span> 算法实现</h2>
+<div class="outline-text-2" id="text-1">
+<p>
+GCC版list::sort()算法基本上和最初的SGI版完全一致（可见GCC代码注释），其本质上是一种bottom-up merge sort, 具体算法流程如下：
+</p>
+<ol class="org-ol">
+<li>创建一个含64个元素的数组_<sub>tmp来存储merge</sub> sort过程的中间结果, _<sub>tmp</sub>[i]所存储的元素数量为2<sup>i</sup>, 因此最多可以容纳2<sup>64</sup> - 1个元素而可以满足任何实际排序需求。</li>
+<li>取出list的第一个元素，将其和_<sub>tmp</sub>[0]开始合并。</li>
+<li>若合并后_<sub>tmp</sub>[i]非空，则将_<sub>tmp</sub>[i]合并如_<sub>tmp</sub>[i+1], 直到_<sub>tmp</sub>[i]为空为止。
+_<sub>tmp</sub>[0 -&gt; i]的所有元素个数为2<sup>i+1</sup> - 1, 加上第2步取出的链表头后元素总数刚好和_<sub>tmp</sub>[i+1]的元素个数2<sup>i+1</sup>相等, 因此合并流程和bottom-up merge sort完全一致。</li>
+<li>重复2和3, 直到list为空为止。</li>
+<li>合并所有非空_<sub>tmp</sub>[i]以得到排序好后的最终结果。</li>
+</ol>
+<p>
+其具体代码如下：
+</p>
+<div class="org-src-container">
+<pre class="src src-cpp"><span style="font-weight: bold;">template</span>&lt;<span style="font-weight: bold;">typename</span> <span style="font-weight: bold; text-decoration: underline;">_Tp</span>, <span style="font-weight: bold;">typename</span> <span style="font-weight: bold; text-decoration: underline;">_Alloc</span>&gt;
+<span style="font-weight: bold; text-decoration: underline;">void</span> <span style="font-weight: bold; text-decoration: underline;">list</span>&lt;<span style="font-weight: bold; text-decoration: underline;">_Tp</span>, <span style="font-weight: bold; text-decoration: underline;">_Alloc</span>&gt;::<span style="font-weight: bold;">sort</span>() {
+    <span style="font-weight: bold; font-style: italic;">// </span><span style="font-weight: bold; font-style: italic;">Do nothing if the list has length 0 or 1.</span>
+    <span style="font-weight: bold;">if</span> (<span style="font-weight: bold;">this</span>-&gt;_M_impl._M_node._M_next != &amp;<span style="font-weight: bold;">this</span>-&gt;_M_impl._M_node
+  &amp;&amp; <span style="font-weight: bold;">this</span>-&gt;_M_impl._M_node._M_next-&gt;_M_next != &amp;<span style="font-weight: bold;">this</span>-&gt;_M_impl._M_node)
+    {
+<span style="font-weight: bold;">using</span> <span style="font-weight: bold; text-decoration: underline;">__detail</span>::_Scratch_list;
+<span style="font-weight: bold; text-decoration: underline;">_Scratch_list</span> <span style="font-weight: bold; font-style: italic;">__carry</span>;
+<span style="font-weight: bold; text-decoration: underline;">_Scratch_list</span> <span style="font-weight: bold; font-style: italic;">__tmp</span>[64];  <span style="font-weight: bold; font-style: italic;">// </span><span style="font-weight: bold; font-style: italic;">__tmp[i]&#25152;&#23384;&#20648;&#30340;&#20803;&#32032;&#25968;&#37327;&#20026;2^i, &#22240;&#27492;&#26368;&#22810;&#21487;&#20197;&#23481;&#32435;2^64 - 1&#20010;&#20803;&#32032;&#32780;&#21487;&#20197;&#28385;&#36275;&#20219;&#20309;&#23454;&#38469;&#25490;&#24207;&#38656;&#27714;&#12290;</span>
+<span style="font-weight: bold; text-decoration: underline;">_Scratch_list</span>* <span style="font-weight: bold; font-style: italic;">__fill</span> = __tmp;
+<span style="font-weight: bold; text-decoration: underline;">_Scratch_list</span>* <span style="font-weight: bold; font-style: italic;">__counter</span>;
+<span style="font-weight: bold; text-decoration: underline;">_Scratch_list</span>::<span style="font-weight: bold; text-decoration: underline;">_Ptr_cmp</span>&lt;<span style="font-weight: bold; text-decoration: underline;">iterator</span>, <span style="font-weight: bold; text-decoration: underline;">void</span>&gt; <span style="font-weight: bold; font-style: italic;">__ptr_comp</span>;
+
+__try {
+    <span style="font-weight: bold;">do</span> {
+        __carry._M_take_one(begin()._M_node);  <span style="font-weight: bold; font-style: italic;">// </span><span style="font-weight: bold; font-style: italic;">&#21462;&#20986;&#31532;&#19968;&#20010;&#20803;&#32032;</span>
+        <span style="font-weight: bold;">for</span>(__counter = __tmp;
+            __counter != __fill &amp;&amp; !__counter-&gt;empty();
+            ++__counter)
+        {
+            <span style="font-weight: bold; font-style: italic;">// </span><span style="font-weight: bold; font-style: italic;">&#23558;__carry&#21644;__tmp[i]&#36880;&#39033;&#21512;&#24182;&#65292;&#30452;&#21040;__counter (tmp[i])&#20026;&#31354;&#25110;&#21040;&#36798;__fill&#20026;&#27490;</span>
+            __counter-&gt;merge(__carry, __ptr_comp);
+            __carry.swap(*__counter);
+        }
+        __carry.swap(*__counter);
+        <span style="font-weight: bold;">if</span> (__counter == __fill)
+        ++__fill;
+     } <span style="font-weight: bold;">while</span> ( !empty() );
+
+    <span style="font-weight: bold; font-style: italic;">// </span><span style="font-weight: bold; font-style: italic;">&#21512;&#24182;__tmp[0 -&gt; __fill]&#20197;&#24471;&#21040;&#25490;&#24207;&#22909;&#21518;&#30340;&#26368;&#32456;&#32467;&#26524;</span>
+    <span style="font-weight: bold;">for</span> (__counter = __tmp + 1; __counter != __fill; ++__counter)
+      __counter-&gt;merge(__counter[-1], __ptr_comp);
+    __fill[-1].swap(<span style="font-weight: bold;">this</span>-&gt;_M_impl._M_node);
+  }
+<span style="font-weight: bold; text-decoration: underline;">__catch</span>(...)
+  {
+    <span style="font-weight: bold; font-style: italic;">// </span><span style="font-weight: bold; font-style: italic;">Move all nodes back into *this.</span>
+    __carry._M_put_all(end()._M_node);
+    <span style="font-weight: bold;">for</span> (<span style="font-weight: bold; text-decoration: underline;">int</span> <span style="font-weight: bold; font-style: italic;">__i</span> = 0; __i &lt; <span style="font-weight: bold;">sizeof</span>(__tmp)/<span style="font-weight: bold;">sizeof</span>(__tmp[0]); ++__i)
+      __tmp[__i]._M_put_all(end()._M_node);
+    __throw_exception_again;
+  }
+    }
+  }
+</pre>
+</div>
+
+
+<p>
+list元素是离散存储的，因此无需使用tmp buffer来存储merge sort中间结果，而这使得​<b>list merge sort空间复杂度为O(1) (而非数组merge sort的O(N))</b>​。
+</p>
+</div>
+</div>
+<div id="outline-container-orgbc7af12" class="outline-2">
+<h2 id="orgbc7af12"><span class="section-number-2">2.</span> 参考文档</h2>
+<div class="outline-text-2" id="text-2">
+<ol class="org-ol">
+<li>STL源码剖析 P142</li>
+<li><a href="https://stackoverflow.com/questions/6728580/what-makes-the-gcc-stdlist-sort-implementation-so-fast">https://stackoverflow.com/questions/6728580/what-makes-the-gcc-stdlist-sort-implementation-so-fast</a></li>
+<li><a href="https://www.cnblogs.com/evenleee/p/11719723.html">stl<sub>list</sub>::sort算法分析</a></li>
+</ol>
+</div>
+</div>
+
+    </div><!-- /.entry-content -->
+
+  </article>
+</section>
         <section id="extras" class="body">
         </section><!-- /#extras -->
 

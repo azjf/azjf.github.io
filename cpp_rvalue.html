@@ -1,0 +1,503 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <meta name="generator" content="Pelican" />
+        <title>浅谈C++右值/Universal引用和std::move/forward()实现原理</title>
+        <link rel="stylesheet" href="/theme/css/main.css" />
+        <meta name="description" content="1. 右值引用与Universal引用 1.1. 右值引用变量本身是左值 1.2. 模板函数Universal引用入参 2. std::move/forward()实现原理 2.1. std::move() 2.2. std::forward() 3. 参考文 …" />
+
+        <style>
+          /* #content { max-width: 60em; margin: auto; } */
+          .title  { text-align: center;
+                     margin-bottom: .2em; }
+          .subtitle { text-align: center;
+                      font-size: medium;
+                      font-weight: bold;
+                      margin-top:0; }
+          .todo   { font-family: monospace; color: red; }
+          .done   { font-family: monospace; color: green; }
+          .priority { font-family: monospace; color: orange; }
+          .tag    { background-color: #eee; font-family: monospace;
+                    padding: 2px; font-size: 80%; font-weight: normal; }
+          .timestamp { color: #bebebe; }
+          .timestamp-kwd { color: #5f9ea0; }
+          .org-right  { margin-left: auto; margin-right: 0px;  text-align: right; }
+          .org-left   { margin-left: 0px;  margin-right: auto; text-align: left; }
+          .org-center { margin-left: auto; margin-right: auto; text-align: center; }
+          .underline { text-decoration: underline; }
+          #postamble p, #preamble p { font-size: 90%; margin: .2em; }
+          p.verse { margin-left: 3%; }
+          pre {
+            border: 1px solid #e6e6e6;
+            border-radius: 3px;
+            background-color: #f2f2f2;
+            padding: 8pt;
+            font-family: monospace;
+            overflow: auto;
+            margin: 1.2em;
+          }
+          pre.src {
+            position: relative;
+            overflow: auto;
+          }
+          pre.src:before {
+            display: none;
+            position: absolute;
+            top: -8px;
+            right: 12px;
+            padding: 3px;
+            color: #555;
+            background-color: #f2f2f299;
+          }
+          pre.src:hover:before { display: inline; margin-top: 14px;}
+          /* Languages per Org manual */
+          pre.src-asymptote:before { content: 'Asymptote'; }
+          pre.src-awk:before { content: 'Awk'; }
+          pre.src-authinfo::before { content: 'Authinfo'; }
+          pre.src-C:before { content: 'C'; }
+          /* pre.src-C++ doesn't work in CSS */
+          pre.src-clojure:before { content: 'Clojure'; }
+          pre.src-css:before { content: 'CSS'; }
+          pre.src-D:before { content: 'D'; }
+          pre.src-ditaa:before { content: 'ditaa'; }
+          pre.src-dot:before { content: 'Graphviz'; }
+          pre.src-calc:before { content: 'Emacs Calc'; }
+          pre.src-emacs-lisp:before { content: 'Emacs Lisp'; }
+          pre.src-fortran:before { content: 'Fortran'; }
+          pre.src-gnuplot:before { content: 'gnuplot'; }
+          pre.src-haskell:before { content: 'Haskell'; }
+          pre.src-hledger:before { content: 'hledger'; }
+          pre.src-java:before { content: 'Java'; }
+          pre.src-js:before { content: 'Javascript'; }
+          pre.src-latex:before { content: 'LaTeX'; }
+          pre.src-ledger:before { content: 'Ledger'; }
+          pre.src-lisp:before { content: 'Lisp'; }
+          pre.src-lilypond:before { content: 'Lilypond'; }
+          pre.src-lua:before { content: 'Lua'; }
+          pre.src-matlab:before { content: 'MATLAB'; }
+          pre.src-mscgen:before { content: 'Mscgen'; }
+          pre.src-ocaml:before { content: 'Objective Caml'; }
+          pre.src-octave:before { content: 'Octave'; }
+          pre.src-org:before { content: 'Org mode'; }
+          pre.src-oz:before { content: 'OZ'; }
+          pre.src-plantuml:before { content: 'Plantuml'; }
+          pre.src-processing:before { content: 'Processing.js'; }
+          pre.src-python:before { content: 'Python'; }
+          pre.src-R:before { content: 'R'; }
+          pre.src-ruby:before { content: 'Ruby'; }
+          pre.src-sass:before { content: 'Sass'; }
+          pre.src-scheme:before { content: 'Scheme'; }
+          pre.src-screen:before { content: 'Gnu Screen'; }
+          pre.src-sed:before { content: 'Sed'; }
+          pre.src-sh:before { content: 'shell'; }
+          pre.src-sql:before { content: 'SQL'; }
+          pre.src-sqlite:before { content: 'SQLite'; }
+          /* additional languages in org.el's org-babel-load-languages alist */
+          pre.src-forth:before { content: 'Forth'; }
+          pre.src-io:before { content: 'IO'; }
+          pre.src-J:before { content: 'J'; }
+          pre.src-makefile:before { content: 'Makefile'; }
+          pre.src-maxima:before { content: 'Maxima'; }
+          pre.src-perl:before { content: 'Perl'; }
+          pre.src-picolisp:before { content: 'Pico Lisp'; }
+          pre.src-scala:before { content: 'Scala'; }
+          pre.src-shell:before { content: 'Shell Script'; }
+          pre.src-ebnf2ps:before { content: 'ebfn2ps'; }
+          /* additional language identifiers per "defun org-babel-execute"
+               in ob-*.el */
+          pre.src-cpp:before  { content: 'C++'; }
+          pre.src-abc:before  { content: 'ABC'; }
+          pre.src-coq:before  { content: 'Coq'; }
+          pre.src-groovy:before  { content: 'Groovy'; }
+          /* additional language identifiers from org-babel-shell-names in
+             ob-shell.el: ob-shell is the only babel language using a lambda to put
+             the execution function name together. */
+          pre.src-bash:before  { content: 'bash'; }
+          pre.src-csh:before  { content: 'csh'; }
+          pre.src-ash:before  { content: 'ash'; }
+          pre.src-dash:before  { content: 'dash'; }
+          pre.src-ksh:before  { content: 'ksh'; }
+          pre.src-mksh:before  { content: 'mksh'; }
+          pre.src-posh:before  { content: 'posh'; }
+          /* Additional Emacs modes also supported by the LaTeX listings package */
+          pre.src-ada:before { content: 'Ada'; }
+          pre.src-asm:before { content: 'Assembler'; }
+          pre.src-caml:before { content: 'Caml'; }
+          pre.src-delphi:before { content: 'Delphi'; }
+          pre.src-html:before { content: 'HTML'; }
+          pre.src-idl:before { content: 'IDL'; }
+          pre.src-mercury:before { content: 'Mercury'; }
+          pre.src-metapost:before { content: 'MetaPost'; }
+          pre.src-modula-2:before { content: 'Modula-2'; }
+          pre.src-pascal:before { content: 'Pascal'; }
+          pre.src-ps:before { content: 'PostScript'; }
+          pre.src-prolog:before { content: 'Prolog'; }
+          pre.src-simula:before { content: 'Simula'; }
+          pre.src-tcl:before { content: 'tcl'; }
+          pre.src-tex:before { content: 'TeX'; }
+          pre.src-plain-tex:before { content: 'Plain TeX'; }
+          pre.src-verilog:before { content: 'Verilog'; }
+          pre.src-vhdl:before { content: 'VHDL'; }
+          pre.src-xml:before { content: 'XML'; }
+          pre.src-nxml:before { content: 'XML'; }
+          /* add a generic configuration mode; LaTeX export needs an additional
+             (add-to-list 'org-latex-listings-langs '(conf " ")) in .emacs */
+          pre.src-conf:before { content: 'Configuration File'; }
+
+          table { border-collapse:collapse; }
+          caption.t-above { caption-side: top; }
+          caption.t-bottom { caption-side: bottom; }
+          td, th { vertical-align:top;  }
+          th.org-right  { text-align: center;  }
+          th.org-left   { text-align: center;   }
+          th.org-center { text-align: center; }
+          td.org-right  { text-align: right;  }
+          td.org-left   { text-align: left;   }
+          td.org-center { text-align: center; }
+          dt { font-weight: bold; }
+          .footpara { display: inline; }
+          .footdef  { margin-bottom: 1em; }
+          .figure { padding: 1em; }
+          .figure p { text-align: center; }
+          .equation-container {
+            display: table;
+            text-align: center;
+            width: 100%;
+          }
+          .equation {
+            vertical-align: middle;
+          }
+          .equation-label {
+            display: table-cell;
+            text-align: right;
+            vertical-align: middle;
+          }
+          .inlinetask {
+            padding: 10px;
+            border: 2px solid gray;
+            margin: 10px;
+            background: #ffffcc;
+          }
+          #org-div-home-and-up
+           { text-align: right; font-size: 70%; white-space: nowrap; }
+          textarea { overflow-x: auto; }
+          .linenr { font-size: smaller }
+          .code-highlighted { background-color: #ffff00; }
+          .org-info-js_info-navigation { border-style: none; }
+          #org-info-js_console-label
+            { font-size: 10px; font-weight: bold; white-space: nowrap; }
+          .org-info-js_search-highlight
+            { background-color: #ffff00; color: #000000; font-weight: bold; }
+          .org-svg { }
+        </style>
+
+        <script>
+          window.MathJax = {
+            tex: {
+              ams: {
+                multlineWidth: '85%'
+              },
+              tags: 'ams',
+              tagSide: 'right',
+              tagIndent: '.8em'
+            },
+            chtml: {
+              scale: 1.0,
+              displayAlign: 'center',
+              displayIndent: '0em'
+            },
+            svg: {
+              scale: 1.0,
+              displayAlign: 'center',
+              displayIndent: '0em'
+            },
+            output: {
+              font: 'mathjax-modern',
+              displayOverflow: 'overflow'
+            }
+          };
+        </script>
+
+        <script
+          id="MathJax-script"
+          async
+          src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js">
+        </script>
+</head>
+
+<body id="index" class="home">
+        <header id="banner" class="body">
+                <nav><ul>
+                    <li><a href="/">首页</a></li>
+                    <li><a href="/categories.html">分类</a></li>
+                    <li><a href="/tags.html">标签</a></li>
+                    <li><a href="/archives.html">归档</a></li>
+                    <li><a href="https://github.com/azjf">关于</a></li>
+                </ul></nav>
+        </header><!-- /#banner -->
+<section id="content" class="body">
+  <article>
+    <header>
+      <h1 class="entry-title">
+        <a href="/cpp_rvalue.html" rel="bookmark"
+           title="Permalink to 浅谈C++右值/Universal引用和std::move/forward()实现原理">浅谈C++右值/Universal引用和std::move/forward()实现原理</a></h1>
+    </header>
+
+    <div class="entry-content">
+<footer class="post-info">
+        <abbr class="published" title="2024-04-06T00:00:00+08:00">
+                2024-04-06
+        </abbr>
+<p>分类: <a href="/category/c.html">C++</a></p>
+标签: <a href="/tag/c.html">C++</a> <a href="/tag/rvalue.html">RValue</a> <a href="/tag/move-semantics.html">Move Semantics</a> <a href="/tag/universal-reference.html">Universal Reference</a> <a href="/tag/stdmove.html">std::move()</a> <a href="/tag/stdforward.html">std::forward()</a> <a href="/tag/you-zhi.html">右值</a> <a href="/tag/yi-dong-yu-yi.html">移动语义</a> <a href="/tag/universalyin-yong.html">Universal引用</a> 
+</footer><!-- /.post-info -->      <div id="table-of-contents" role="doc-toc">
+
+<div id="text-table-of-contents" role="doc-toc">
+<ul>
+<li><a href="#org820f687">1. 右值引用与Universal引用</a>
+<ul>
+<li><a href="#orgfc22396">1.1. 右值引用变量本身是左值</a></li>
+<li><a href="#org3ea3f0b">1.2. 模板函数Universal引用入参</a></li>
+</ul>
+</li>
+<li><a href="#org39768cf">2. std::move/forward()实现原理</a>
+<ul>
+<li><a href="#orge44c17f">2.1. std::move()</a></li>
+<li><a href="#orgc6adf52">2.2. std::forward()</a></li>
+</ul>
+</li>
+<li><a href="#org13b74d1">3. 参考文档</a></li>
+</ul>
+</div>
+</div>
+<p>
+C++ 11为实现移动语义而引入了右值引用，其主要被用于表达当具有右值引用入参的函数被执行后其原实参将处于无效状态：
+</p>
+<div class="org-src-container">
+<pre class="src src-cpp"><span style="font-weight: bold;">struct</span> <span style="font-weight: bold; text-decoration: underline;">A</span> { };
+<span style="font-weight: bold; text-decoration: underline;">void</span> <span style="font-weight: bold;">f</span>(<span style="font-weight: bold; text-decoration: underline;">A</span> &amp;&amp;<span style="font-weight: bold; font-style: italic;">a</span>) { destroyData(a); } <span style="font-weight: bold; font-style: italic;">// </span><span style="font-weight: bold; font-style: italic;">&#34920;&#26126;f()&#23558;&#28040;&#32791;&#20837;&#21442;&#30340;&#25968;&#25454;&#65292;&#25191;&#34892;&#21518;&#21407;&#23454;&#21442;&#23558;&#22788;&#20110;&#26080;&#25928;&#29366;&#24577;</span>
+<span style="font-weight: bold; text-decoration: underline;">void</span> <span style="font-weight: bold;">f</span>(<span style="font-weight: bold;">const</span> <span style="font-weight: bold; text-decoration: underline;">A</span> &amp;<span style="font-weight: bold; font-style: italic;">a</span>) {}
+<span style="font-weight: bold; text-decoration: underline;">A</span> <span style="font-weight: bold; font-style: italic;">a</span>;
+f(<span style="font-weight: bold; text-decoration: underline;">std</span>::move(a));  <span style="font-weight: bold; font-style: italic;">// </span><span style="font-weight: bold; font-style: italic;">&#25191;&#34892;&#21518;a&#23558;&#22788;&#20110;&#26080;&#25928;&#29366;&#24577;</span>
+</pre>
+</div>
+
+<p>
+右值引用和移动语义是std::unique<sub>ptr</sub>()等标准库函数的实现基础，其在现代C++中有很重要的作用。
+</p>
+
+<p>
+本文接下来将讨论C++右值引用和语法与之相似的模板函数Universal引用入参，以及std::move/forward()的实现原理。
+</p>
+<div id="outline-container-org820f687" class="outline-2">
+<h2 id="org820f687"><span class="section-number-2">1.</span> 右值引用与Universal引用</h2>
+<div class="outline-text-2" id="text-1">
+<p>
+C++表达式结果可以被分为lvalue (left) / rvalue (right) / xvalue  (eXpiring) /glvalue (generalized) / prvalue (pure), 它们之间的关系如<a href="https://stackoverflow.com/questions/3601602/what-are-rvalues-lvalues-xvalues-glvalues-and-prvalues">下图</a>所示：
+</p>
+
+<div id="orgd50f384" class="figure">
+<p><img src="https://github.com/azjf/azjf.github.io/raw/main/img/39/2BF8C9-28BA-4E63-BF45-1DBE6E4B7042/expression_type.png" alt="expression_type.png" width="300px" />
+</p>
+</div>
+<p>
+其中，左值lvalue为可以出现在赋值表达式左侧的值（表示身份，一般为可以取址的变量），右值rvalue则为只能出现在赋值表达式右边的值（表示值，一般为临时对象，不可取址）。
+此外，xvalue为即将被销毁的值，如右值引用类型的函数返回值；prvalue则为xvalue之外的rvalue，比如非右值引用的普通函数返回值。
+</p>
+
+<p>
+右值引用为只可以绑定到右值上的引用，如​<code>A &amp;&amp;a = A()</code>​，右值引用的最终消费者主要为移动构造函数和移动赋值函数，其具体用法可以参考C++ Primer等教材，此处不再赘述。
+此外，具有右值引用入参的函数也是右值引用的消费者，此时右值引用的主要目的是表明当函数被执行后其原实参数据将被消耗殆尽。
+</p>
+</div>
+<div id="outline-container-orgfc22396" class="outline-3">
+<h3 id="orgfc22396"><span class="section-number-3">1.1.</span> 右值引用变量本身是左值</h3>
+<div class="outline-text-3" id="text-1-1">
+<p>
+右值引用变量本身是左值，因此不可将一个右值引用变量赋值给另外一个右值引用变量，如下：
+</p>
+<div class="org-src-container">
+<pre class="src src-cpp"><span style="font-weight: bold; text-decoration: underline;">A</span> &amp;&amp;<span style="font-weight: bold; font-style: italic;">ra1</span> = A();
+<span style="font-weight: bold; text-decoration: underline;">A</span> &amp;&amp;<span style="font-weight: bold; font-style: italic;">ra2</span> = ra1;  <span style="font-weight: bold; font-style: italic;">//  </span><span style="font-weight: bold; font-style: italic;">error: cannot bind rvalue reference of type &#8216;A&amp;&amp;&#8217; to lvalue of type &#8216;A&#8217;</span>
+<span style="font-weight: bold; text-decoration: underline;">A</span> &amp;&amp;<span style="font-weight: bold; font-style: italic;">ra2</span> = <span style="font-weight: bold; text-decoration: underline;">std</span>::move(ra1);
+</pre>
+</div>
+
+<p>
+C++这样规定的原因为​<b>确保rvalue在被move前一定处于有效状态，从而可以被正常使用</b>​。
+若不如此规定的话，将难以确认rvalue的有效时间，比如：
+</p>
+<div class="org-src-container">
+<pre class="src src-cpp"><span style="font-weight: bold; text-decoration: underline;">A</span> &amp;&amp;<span style="font-weight: bold; font-style: italic;">ra</span> = A();
+f(ra);  <span style="font-weight: bold; font-style: italic;">// </span><span style="font-weight: bold; font-style: italic;">&#33509;&#20801;&#35768;A &amp;&amp;ra2 = ra, &#21017;f(ra)&#20043;&#21518;ra&#25152;&#20540;&#23545;&#35937;&#23558;&#22788;&#20110;&#26080;&#25928;&#29366;&#24577;</span>
+<span style="font-weight: bold; text-decoration: underline;">A</span> <span style="font-weight: bold;">a2</span>(<span style="font-weight: bold; text-decoration: underline;">std</span>::<span style="font-weight: bold; text-decoration: underline;">move</span>(<span style="font-weight: bold; font-style: italic;">ra</span>));
+</pre>
+</div>
+<p>
+而如此规定的话，则可以保证f(ra)执行后ra仍然处于有效状态，进而确保a2可以获取到ra有效值。
+</p>
+</div>
+</div>
+<div id="outline-container-org3ea3f0b" class="outline-3">
+<h3 id="org3ea3f0b"><span class="section-number-3">1.2.</span> 模板函数Universal引用入参</h3>
+<div class="outline-text-3" id="text-1-2">
+<p>
+Universal引用的在语法上很像右值引用，但其实两者完全不同。
+Universal引用是一种函数模板参数，其主要被用于参数完美转发（保留原始引用/const属性等信息），如下：
+</p>
+<div class="org-src-container">
+<pre class="src src-cpp"><span style="font-weight: bold;">template</span> &lt;<span style="font-weight: bold;">typename</span> <span style="font-weight: bold; text-decoration: underline;">T</span>&gt;
+<span style="font-weight: bold; text-decoration: underline;">void</span> <span style="font-weight: bold;">f</span>(<span style="font-weight: bold; text-decoration: underline;">T</span> &amp;&amp;<span style="font-weight: bold; font-style: italic;">t</span>) {
+    doSometing();
+    g(<span style="font-weight: bold; text-decoration: underline;">std</span>::forward&lt;<span style="font-weight: bold; text-decoration: underline;">T</span>&gt;(t));  <span style="font-weight: bold; font-style: italic;">// </span><span style="font-weight: bold; font-style: italic;">&#23558;t&#20174;f()&#23436;&#32654;&#36716;&#21457;&#33267;g()</span>
+}
+</pre>
+</div>
+</div>
+</div>
+</div>
+<div id="outline-container-org39768cf" class="outline-2">
+<h2 id="org39768cf"><span class="section-number-2">2.</span> std::move/forward()实现原理</h2>
+<div class="outline-text-2" id="text-2">
+</div>
+<div id="outline-container-orge44c17f" class="outline-3">
+<h3 id="orge44c17f"><span class="section-number-3">2.1.</span> std::move()</h3>
+<div class="outline-text-3" id="text-2-1">
+<p>
+move()被用于生成右值引用，其是基于static<sub>cast实现的</sub>，具体<a href="https://github.com/gcc-mirror/gcc/blob/releases/gcc-14.2.0/libstdc%2B%2B-v3/include/bits/move.h#L67">GCC实现源码</a>如下：
+</p>
+<div class="org-src-container">
+<pre class="src src-cpp"><span style="font-weight: bold;">template</span> &lt;<span style="font-weight: bold;">typename</span> <span style="font-weight: bold; text-decoration: underline;">T</span>&gt;
+<span style="font-weight: bold;">typename</span> <span style="font-weight: bold; text-decoration: underline;">remove_reference</span>&lt;<span style="font-weight: bold; text-decoration: underline;">T</span>&gt;::<span style="font-weight: bold; text-decoration: underline;">type</span> &amp;&amp;<span style="font-weight: bold;">move</span>(<span style="font-weight: bold; text-decoration: underline;">T</span> &amp;&amp;<span style="font-weight: bold; font-style: italic;">t</span>)  <span style="font-weight: bold; font-style: italic;">// </span><span style="font-weight: bold; font-style: italic;">&#24341;&#29992;&#25240;&#21472;&#65292;&#19988;&#22312;T&#20013;&#20445;&#30041;reference/const&#23646;&#24615;</span>
+{
+   <span style="font-weight: bold; font-style: italic;">// </span><span style="font-weight: bold; font-style: italic;">&#30001;static_cast&#23436;&#25104;&#20174;&#24038;&#20540;&#24341;&#29992;&#21040;rvalue&#24341;&#29992;&#30340;&#36716;&#25442;&#65292;&#20174;lvalue&#21040;rvalue&#30340;&#36716;&#25442;&#26412;&#26469;&#23601;&#26159;&#21512;&#24773;&#21512;&#29702;&#30340;&#38656;&#27714;</span>
+   <span style="font-weight: bold; font-style: italic;">// </span><span style="font-weight: bold; font-style: italic;">A &amp;&amp;ra = std::move(a)&#26412;&#36136;&#19978;&#20026;A &amp;&amp;ra = static_cast&lt;A &amp;&amp;&gt;(a);</span>
+   <span style="font-weight: bold;">return</span> <span style="font-weight: bold;">static_cast</span>&lt;<span style="font-weight: bold;">typename</span> <span style="font-weight: bold; text-decoration: underline;">remove_reference</span>&lt;<span style="font-weight: bold; text-decoration: underline;">T</span>&gt;::<span style="font-weight: bold; text-decoration: underline;">type</span> &amp;&amp;&gt;(t);
+}
+</pre>
+</div>
+<p>
+其中，remove<sub>reference</sub>()的作用为移除引用，其实现原理为模板类偏特化，具体<a href="https://github.com/gcc-mirror/gcc/blob/releases/gcc-14.2.0/libstdc%2B%2B-v3/include/std/type_traits#L1692">GCC实现源码</a>如下：
+</p>
+<div class="org-src-container">
+<pre class="src src-cpp"><span style="font-weight: bold;">template</span>&lt;<span style="font-weight: bold;">typename</span> <span style="font-weight: bold; text-decoration: underline;">_Tp</span>&gt; <span style="font-weight: bold;">struct</span> <span style="font-weight: bold; text-decoration: underline;">remove_reference</span> { <span style="font-weight: bold;">using</span> <span style="font-weight: bold; text-decoration: underline;">type</span> = _Tp; };  <span style="font-weight: bold; font-style: italic;">// </span><span style="font-weight: bold; font-style: italic;">&#36890;&#29992;&#29256;&#26412;</span>
+<span style="font-weight: bold;">template</span>&lt;<span style="font-weight: bold;">typename</span> <span style="font-weight: bold; text-decoration: underline;">_Tp</span>&gt; <span style="font-weight: bold;">struct</span> <span style="font-weight: bold; text-decoration: underline;">remove_reference</span>&lt;<span style="font-weight: bold; text-decoration: underline;">_Tp</span>&amp;&gt; { <span style="font-weight: bold;">using</span> <span style="font-weight: bold; text-decoration: underline;">type</span> = _Tp; };  <span style="font-weight: bold; font-style: italic;">// </span><span style="font-weight: bold; font-style: italic;">&#38024;&#23545;lvalue&#24341;&#29992;&#30340;&#20559;&#29305;&#21270;&#29256;&#26412;</span>
+<span style="font-weight: bold;">template</span>&lt;<span style="font-weight: bold;">typename</span> <span style="font-weight: bold; text-decoration: underline;">_Tp</span>&gt; <span style="font-weight: bold;">struct</span> <span style="font-weight: bold; text-decoration: underline;">remove_reference</span>&lt;<span style="font-weight: bold; text-decoration: underline;">_Tp</span>&amp;&amp;&gt; { <span style="font-weight: bold;">using</span> <span style="font-weight: bold; text-decoration: underline;">type</span> = _Tp; };  <span style="font-weight: bold; font-style: italic;">// </span><span style="font-weight: bold; font-style: italic;">&#38024;&#23545;rvalue&#24341;&#29992;&#30340;&#20559;&#29305;&#21270;&#29256;&#26412;</span>
+</pre>
+</div>
+
+<p>
+static<sub>cast</sub>&lt;T&amp;&amp;&gt;()的结果为右值，因此可以被绑定到右值引用上。
+​<b>static<sub>cast可以接受任意类型入参的原因为其是关键字而不是函数</sub></b>​。
+​<b>此处的static<sub>cast仅被用于在编译时绕过类型检测系统</sub>，并没有对应的运行时代码（其它某些情况下static<sub>cast会生成运行时代码</sub>），因此右值引用最底层的实现和普通引用一样都是指针。</b>​
+另外，remove<sub>reference</sub>()也仅在编译时生效，也没有对应的运行时代码。
+因此，​<b>move()并不会生成运行时代码</b>​，本质上只是绕过类型检测系统。
+</p>
+</div>
+</div>
+<div id="outline-container-orgc6adf52" class="outline-3">
+<h3 id="orgc6adf52"><span class="section-number-3">2.2.</span> std::forward()</h3>
+<div class="outline-text-3" id="text-2-2">
+<p>
+​<b>forward()需要在使用时显示指明参数类型，其实现为相互重载的两个函数模板</b>​, 两者函数体相同，其目的是确保显示实例化后的两个forward()实例可以匹配到可能的左/右值两种实参（move()则通过universal引用来接受这两种可能的实参），进而实现完美转发左/右值。
+forward()是基于static<sub>cast和引用折叠来实现的</sub>，具体的<a href="https://github.com/gcc-mirror/gcc/blob/releases/gcc-14.2.0/libstdc%2B%2B-v3/include/bits/move.h#L67">GCC实现源码</a>如下：
+</p>
+<div class="org-src-container">
+<pre class="src src-cpp"><span style="font-weight: bold;">template</span>&lt;<span style="font-weight: bold;">typename</span> <span style="font-weight: bold; text-decoration: underline;">_Tp</span>&gt; _GLIBCXX_NODISCARD <span style="font-weight: bold;">constexpr</span> <span style="font-weight: bold; text-decoration: underline;">_Tp</span>&amp;&amp; <span style="font-weight: bold;">forward</span>(<span style="font-weight: bold;">typename</span> <span style="font-weight: bold; text-decoration: underline;">std</span>::<span style="font-weight: bold; text-decoration: underline;">remove_reference</span>&lt;<span style="font-weight: bold; text-decoration: underline;">_Tp</span>&gt;::<span style="font-weight: bold; text-decoration: underline;">type</span>&amp; <span style="font-weight: bold; font-style: italic;">__t</span>) <span style="font-weight: bold;">noexcept</span> { <span style="font-weight: bold;">return</span> <span style="font-weight: bold;">static_cast</span>&lt;<span style="font-weight: bold; text-decoration: underline;">_Tp</span>&amp;&amp;&gt;(__t); }  <span style="font-weight: bold; font-style: italic;">// </span><span style="font-weight: bold; font-style: italic;">forward1()</span>
+<span style="font-weight: bold;">template</span>&lt;<span style="font-weight: bold;">typename</span> <span style="font-weight: bold; text-decoration: underline;">_Tp</span>&gt; _GLIBCXX_NODISCARD <span style="font-weight: bold;">constexpr</span> <span style="font-weight: bold; text-decoration: underline;">_Tp</span>&amp;&amp; <span style="font-weight: bold;">forward</span>(<span style="font-weight: bold;">typename</span> <span style="font-weight: bold; text-decoration: underline;">std</span>::<span style="font-weight: bold; text-decoration: underline;">remove_reference</span>&lt;<span style="font-weight: bold; text-decoration: underline;">_Tp</span>&gt;::<span style="font-weight: bold; text-decoration: underline;">type</span>&amp;&amp; <span style="font-weight: bold; font-style: italic;">__t</span>) <span style="font-weight: bold;">noexcept</span> { <span style="font-weight: bold;">return</span> <span style="font-weight: bold;">static_cast</span>&lt;<span style="font-weight: bold; text-decoration: underline;">_Tp</span>&amp;&amp;&gt;(__t); }  <span style="font-weight: bold; font-style: italic;">// </span><span style="font-weight: bold; font-style: italic;">forward2()</span>
+</pre>
+</div>
+<p>
+​<b>forward()在使用时已被实例化了，此处的<sub>Tp为具体类型</sub></b>​，<sub>Tp</sub>&amp;&amp;也不是universal引用，但仍然可以进行引用折叠。
+以int类型为例，<sub>Tp的可能类型和对应的转发效果如下</sub>：
+</p>
+<table border="2" cellspacing="0" cellpadding="6" rules="groups" frame="hsides">
+
+
+<colgroup>
+<col  class="org-left" />
+
+<col  class="org-left" />
+
+<col  class="org-left" />
+
+<col  class="org-left" />
+</colgroup>
+<tbody>
+<tr>
+<td class="org-left">_Tp实例化类型</td>
+<td class="org-left">forward()形参类型</td>
+<td class="org-left">forward()实参类型</td>
+<td class="org-left">返回值类型</td>
+</tr>
+
+<tr>
+<td class="org-left">int</td>
+<td class="org-left">int&amp; (forward1), int&amp;&amp; (forward2)</td>
+<td class="org-left">(const) int (匹配forward1), (const) int&amp; (匹配forward1), int&amp;&amp; (匹配forward2)</td>
+<td class="org-left">(const) int&amp;, (const) int&amp;, int&amp;&amp;</td>
+</tr>
+
+<tr>
+<td class="org-left">int&amp;</td>
+<td class="org-left">int&amp; (forward1), int&amp;&amp; (forward2)</td>
+<td class="org-left">(const) int (匹配forward1), (const) int&amp; (匹配forward1), int&amp;&amp; (匹配forward2)</td>
+<td class="org-left">(const) int&amp;, (const) int&amp;, int&amp;&amp;</td>
+</tr>
+
+<tr>
+<td class="org-left">int&amp;&amp;</td>
+<td class="org-left">int&amp; (forward1), int&amp;&amp; (forward2)</td>
+<td class="org-left">(const) int (匹配forward1), (const) int&amp; (匹配forward1), int&amp;&amp; (匹配forward2)</td>
+<td class="org-left">(const) int&amp;, (const) int&amp;, int&amp;&amp;</td>
+</tr>
+</tbody>
+</table>
+<p>
+其中，forward1()和forward2()为上述forward()实现源码中的两个函数模板。
+从上表可以看出，forward()确实可以完美转发所有实参的引用和const属性。
+</p>
+
+<p>
+std::forward()在使用时必须显示指明参数类型而无法依赖函数模板参数推导的根本原因为​<b>无法根据入参中的remove<sub>reference</sub>&lt;T&gt;::type来反推T</b>​, 因为一个type可能对应到多个T：
+</p>
+<div class="org-src-container">
+<pre class="src src-cpp"><span style="font-weight: bold; text-decoration: underline;">int</span> <span style="font-weight: bold; font-style: italic;">i</span> = 0;
+<span style="font-weight: bold; text-decoration: underline;">std</span>::forward(i);
+<span style="font-weight: bold; font-style: italic;">// </span><span style="font-weight: bold; font-style: italic;">error: no matching function for call to &#8216;forward(int&amp;)&#8217;</span>
+<span style="font-weight: bold; font-style: italic;">// </span><span style="font-weight: bold; font-style: italic;">/usr/include/c++/12/bits/move.h:77:5: note: candidate: &#8216;template&lt;class _Tp&gt; constexpr _Tp&amp;&amp; std::forward(typename remove_reference&lt;_Tp&gt;::type&amp;)&#8217;</span>
+<span style="font-weight: bold; font-style: italic;">// </span><span style="font-weight: bold; font-style: italic;">/usr/include/c++/12/bits/move.h:77:5: note:   template argument deduction/substitution failed:</span>
+<span style="font-weight: bold; font-style: italic;">// </span><span style="font-weight: bold; font-style: italic;">note:   couldn&#8217;t deduce template parameter &#8216;_Tp&#8217;</span>
+
+<span style="font-weight: bold;">template</span>&lt;<span style="font-weight: bold;">typename</span> <span style="font-weight: bold; text-decoration: underline;">T</span>&gt; <span style="font-weight: bold; text-decoration: underline;">void</span> <span style="font-weight: bold;">f</span>(<span style="font-weight: bold;">typename</span> <span style="font-weight: bold; text-decoration: underline;">std</span>::<span style="font-weight: bold; text-decoration: underline;">remove_reference</span>&lt;<span style="font-weight: bold; text-decoration: underline;">T</span>&gt;::<span style="font-weight: bold; text-decoration: underline;">type</span> <span style="font-weight: bold; font-style: italic;">t</span>) {}
+f(i);
+<span style="font-weight: bold; font-style: italic;">// </span><span style="font-weight: bold; font-style: italic;">error: no matching function for call to &#8216;f(int&amp;)&#8217;</span>
+<span style="font-weight: bold; font-style: italic;">// </span><span style="font-weight: bold; font-style: italic;">note: candidate: &#8216;template&lt;class T&gt; void f(typename std::remove_reference&lt;_Tp&gt;::type)&#8217;</span>
+<span style="font-weight: bold; font-style: italic;">// </span><span style="font-weight: bold; font-style: italic;">note:   template argument deduction/substitution failed:</span>
+<span style="font-weight: bold; font-style: italic;">// </span><span style="font-weight: bold; font-style: italic;">note:   couldn&#8217;t deduce template parameter &#8216;T&#8217;</span>
+</pre>
+</div>
+</div>
+</div>
+</div>
+<div id="outline-container-org13b74d1" class="outline-2">
+<h2 id="org13b74d1"><span class="section-number-2">3.</span> 参考文档</h2>
+<div class="outline-text-2" id="text-3">
+<ol class="org-ol">
+<li>Effective Modern C++ Chapter 5: Rvalue References, Move Semantics, and Perfect Forwarding</li>
+<li><a href="https://en.cppreference.com/w/cpp/language/value_category.html">https://en.cppreference.com/w/cpp/language/value_category.html</a></li>
+</ol>
+</div>
+</div>
+
+    </div><!-- /.entry-content -->
+
+  </article>
+</section>
+        <section id="extras" class="body">
+        </section><!-- /#extras -->
+
+</body>
+</html>

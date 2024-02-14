@@ -1,0 +1,422 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <meta name="generator" content="Pelican" />
+        <title>浅谈C++模板参数类型约束</title>
+        <link rel="stylesheet" href="/theme/css/main.css" />
+        <meta name="description" content="1. SFINAE与std::enable_if实现原理 2. C++ 20 Concept 3. 参考文档 C++模板是编译时泛型机制，其可以通过编译时绑定来实现类似于运行时OO多态等效果。 模板本 …" />
+
+        <style>
+          /* #content { max-width: 60em; margin: auto; } */
+          .title  { text-align: center;
+                     margin-bottom: .2em; }
+          .subtitle { text-align: center;
+                      font-size: medium;
+                      font-weight: bold;
+                      margin-top:0; }
+          .todo   { font-family: monospace; color: red; }
+          .done   { font-family: monospace; color: green; }
+          .priority { font-family: monospace; color: orange; }
+          .tag    { background-color: #eee; font-family: monospace;
+                    padding: 2px; font-size: 80%; font-weight: normal; }
+          .timestamp { color: #bebebe; }
+          .timestamp-kwd { color: #5f9ea0; }
+          .org-right  { margin-left: auto; margin-right: 0px;  text-align: right; }
+          .org-left   { margin-left: 0px;  margin-right: auto; text-align: left; }
+          .org-center { margin-left: auto; margin-right: auto; text-align: center; }
+          .underline { text-decoration: underline; }
+          #postamble p, #preamble p { font-size: 90%; margin: .2em; }
+          p.verse { margin-left: 3%; }
+          pre {
+            border: 1px solid #e6e6e6;
+            border-radius: 3px;
+            background-color: #f2f2f2;
+            padding: 8pt;
+            font-family: monospace;
+            overflow: auto;
+            margin: 1.2em;
+          }
+          pre.src {
+            position: relative;
+            overflow: auto;
+          }
+          pre.src:before {
+            display: none;
+            position: absolute;
+            top: -8px;
+            right: 12px;
+            padding: 3px;
+            color: #555;
+            background-color: #f2f2f299;
+          }
+          pre.src:hover:before { display: inline; margin-top: 14px;}
+          /* Languages per Org manual */
+          pre.src-asymptote:before { content: 'Asymptote'; }
+          pre.src-awk:before { content: 'Awk'; }
+          pre.src-authinfo::before { content: 'Authinfo'; }
+          pre.src-C:before { content: 'C'; }
+          /* pre.src-C++ doesn't work in CSS */
+          pre.src-clojure:before { content: 'Clojure'; }
+          pre.src-css:before { content: 'CSS'; }
+          pre.src-D:before { content: 'D'; }
+          pre.src-ditaa:before { content: 'ditaa'; }
+          pre.src-dot:before { content: 'Graphviz'; }
+          pre.src-calc:before { content: 'Emacs Calc'; }
+          pre.src-emacs-lisp:before { content: 'Emacs Lisp'; }
+          pre.src-fortran:before { content: 'Fortran'; }
+          pre.src-gnuplot:before { content: 'gnuplot'; }
+          pre.src-haskell:before { content: 'Haskell'; }
+          pre.src-hledger:before { content: 'hledger'; }
+          pre.src-java:before { content: 'Java'; }
+          pre.src-js:before { content: 'Javascript'; }
+          pre.src-latex:before { content: 'LaTeX'; }
+          pre.src-ledger:before { content: 'Ledger'; }
+          pre.src-lisp:before { content: 'Lisp'; }
+          pre.src-lilypond:before { content: 'Lilypond'; }
+          pre.src-lua:before { content: 'Lua'; }
+          pre.src-matlab:before { content: 'MATLAB'; }
+          pre.src-mscgen:before { content: 'Mscgen'; }
+          pre.src-ocaml:before { content: 'Objective Caml'; }
+          pre.src-octave:before { content: 'Octave'; }
+          pre.src-org:before { content: 'Org mode'; }
+          pre.src-oz:before { content: 'OZ'; }
+          pre.src-plantuml:before { content: 'Plantuml'; }
+          pre.src-processing:before { content: 'Processing.js'; }
+          pre.src-python:before { content: 'Python'; }
+          pre.src-R:before { content: 'R'; }
+          pre.src-ruby:before { content: 'Ruby'; }
+          pre.src-sass:before { content: 'Sass'; }
+          pre.src-scheme:before { content: 'Scheme'; }
+          pre.src-screen:before { content: 'Gnu Screen'; }
+          pre.src-sed:before { content: 'Sed'; }
+          pre.src-sh:before { content: 'shell'; }
+          pre.src-sql:before { content: 'SQL'; }
+          pre.src-sqlite:before { content: 'SQLite'; }
+          /* additional languages in org.el's org-babel-load-languages alist */
+          pre.src-forth:before { content: 'Forth'; }
+          pre.src-io:before { content: 'IO'; }
+          pre.src-J:before { content: 'J'; }
+          pre.src-makefile:before { content: 'Makefile'; }
+          pre.src-maxima:before { content: 'Maxima'; }
+          pre.src-perl:before { content: 'Perl'; }
+          pre.src-picolisp:before { content: 'Pico Lisp'; }
+          pre.src-scala:before { content: 'Scala'; }
+          pre.src-shell:before { content: 'Shell Script'; }
+          pre.src-ebnf2ps:before { content: 'ebfn2ps'; }
+          /* additional language identifiers per "defun org-babel-execute"
+               in ob-*.el */
+          pre.src-cpp:before  { content: 'C++'; }
+          pre.src-abc:before  { content: 'ABC'; }
+          pre.src-coq:before  { content: 'Coq'; }
+          pre.src-groovy:before  { content: 'Groovy'; }
+          /* additional language identifiers from org-babel-shell-names in
+             ob-shell.el: ob-shell is the only babel language using a lambda to put
+             the execution function name together. */
+          pre.src-bash:before  { content: 'bash'; }
+          pre.src-csh:before  { content: 'csh'; }
+          pre.src-ash:before  { content: 'ash'; }
+          pre.src-dash:before  { content: 'dash'; }
+          pre.src-ksh:before  { content: 'ksh'; }
+          pre.src-mksh:before  { content: 'mksh'; }
+          pre.src-posh:before  { content: 'posh'; }
+          /* Additional Emacs modes also supported by the LaTeX listings package */
+          pre.src-ada:before { content: 'Ada'; }
+          pre.src-asm:before { content: 'Assembler'; }
+          pre.src-caml:before { content: 'Caml'; }
+          pre.src-delphi:before { content: 'Delphi'; }
+          pre.src-html:before { content: 'HTML'; }
+          pre.src-idl:before { content: 'IDL'; }
+          pre.src-mercury:before { content: 'Mercury'; }
+          pre.src-metapost:before { content: 'MetaPost'; }
+          pre.src-modula-2:before { content: 'Modula-2'; }
+          pre.src-pascal:before { content: 'Pascal'; }
+          pre.src-ps:before { content: 'PostScript'; }
+          pre.src-prolog:before { content: 'Prolog'; }
+          pre.src-simula:before { content: 'Simula'; }
+          pre.src-tcl:before { content: 'tcl'; }
+          pre.src-tex:before { content: 'TeX'; }
+          pre.src-plain-tex:before { content: 'Plain TeX'; }
+          pre.src-verilog:before { content: 'Verilog'; }
+          pre.src-vhdl:before { content: 'VHDL'; }
+          pre.src-xml:before { content: 'XML'; }
+          pre.src-nxml:before { content: 'XML'; }
+          /* add a generic configuration mode; LaTeX export needs an additional
+             (add-to-list 'org-latex-listings-langs '(conf " ")) in .emacs */
+          pre.src-conf:before { content: 'Configuration File'; }
+
+          table { border-collapse:collapse; }
+          caption.t-above { caption-side: top; }
+          caption.t-bottom { caption-side: bottom; }
+          td, th { vertical-align:top;  }
+          th.org-right  { text-align: center;  }
+          th.org-left   { text-align: center;   }
+          th.org-center { text-align: center; }
+          td.org-right  { text-align: right;  }
+          td.org-left   { text-align: left;   }
+          td.org-center { text-align: center; }
+          dt { font-weight: bold; }
+          .footpara { display: inline; }
+          .footdef  { margin-bottom: 1em; }
+          .figure { padding: 1em; }
+          .figure p { text-align: center; }
+          .equation-container {
+            display: table;
+            text-align: center;
+            width: 100%;
+          }
+          .equation {
+            vertical-align: middle;
+          }
+          .equation-label {
+            display: table-cell;
+            text-align: right;
+            vertical-align: middle;
+          }
+          .inlinetask {
+            padding: 10px;
+            border: 2px solid gray;
+            margin: 10px;
+            background: #ffffcc;
+          }
+          #org-div-home-and-up
+           { text-align: right; font-size: 70%; white-space: nowrap; }
+          textarea { overflow-x: auto; }
+          .linenr { font-size: smaller }
+          .code-highlighted { background-color: #ffff00; }
+          .org-info-js_info-navigation { border-style: none; }
+          #org-info-js_console-label
+            { font-size: 10px; font-weight: bold; white-space: nowrap; }
+          .org-info-js_search-highlight
+            { background-color: #ffff00; color: #000000; font-weight: bold; }
+          .org-svg { }
+        </style>
+
+        <script>
+          window.MathJax = {
+            tex: {
+              ams: {
+                multlineWidth: '85%'
+              },
+              tags: 'ams',
+              tagSide: 'right',
+              tagIndent: '.8em'
+            },
+            chtml: {
+              scale: 1.0,
+              displayAlign: 'center',
+              displayIndent: '0em'
+            },
+            svg: {
+              scale: 1.0,
+              displayAlign: 'center',
+              displayIndent: '0em'
+            },
+            output: {
+              font: 'mathjax-modern',
+              displayOverflow: 'overflow'
+            }
+          };
+        </script>
+
+        <script
+          id="MathJax-script"
+          async
+          src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js">
+        </script>
+</head>
+
+<body id="index" class="home">
+        <header id="banner" class="body">
+                <nav><ul>
+                    <li><a href="/">首页</a></li>
+                    <li><a href="/categories.html">分类</a></li>
+                    <li><a href="/tags.html">标签</a></li>
+                    <li><a href="/archives.html">归档</a></li>
+                    <li><a href="https://github.com/azjf">关于</a></li>
+                </ul></nav>
+        </header><!-- /#banner -->
+<section id="content" class="body">
+  <article>
+    <header>
+      <h1 class="entry-title">
+        <a href="/cpp_template_argument_constraint.html" rel="bookmark"
+           title="Permalink to 浅谈C++模板参数类型约束">浅谈C++模板参数类型约束</a></h1>
+    </header>
+
+    <div class="entry-content">
+<footer class="post-info">
+        <abbr class="published" title="2024-04-21T00:00:00+08:00">
+                2024-04-21
+        </abbr>
+<p>分类: <a href="/category/c.html">C++</a></p>
+标签: <a href="/tag/c.html">C++</a> <a href="/tag/template.html">Template</a> <a href="/tag/template-argument-constraint.html">Template Argument Constraint</a> <a href="/tag/sfinae.html">SFINAE</a> <a href="/tag/enable_if.html">enable_if</a> <a href="/tag/concept.html">Concept</a> <a href="/tag/mo-ban-can-shu-lei-xing-yue-shu.html">模板参数类型约束</a> 
+</footer><!-- /.post-info -->      <div id="table-of-contents" role="doc-toc">
+
+<div id="text-table-of-contents" role="doc-toc">
+<ul>
+<li><a href="#org1233291">1. SFINAE与std::enable_<sub>if实现原理</sub></a></li>
+<li><a href="#orgd9aad29">2. C++ 20 Concept</a></li>
+<li><a href="#orga6b7bf5">3. 参考文档</a></li>
+</ul>
+</div>
+</div>
+<p>
+C++模板是编译时泛型机制，其可以通过编译时绑定来实现类似于运行时OO多态等效果。
+模板本身是图灵完备的，进而进化出来了模板元编程黑魔法，其被广泛用于STL和Boost中。
+</p>
+
+<p>
+有时候，我们需要对模板参数可以接受的类型进行限制，比如让某个模板参数T仅能被实例化为int, 而不能被实例化为std::string.
+在C++ 20之前，这主要是通过Substitution Failure Is Not An Error (SFINAE)等模板元编程黑魔法来实现的，而C++ 20则在语法层面提出了concept概念来约束模板参数类型。
+本文接下来对这两者分别进行讨论，希望能对大家有所帮助。
+</p>
+<div id="outline-container-org1233291" class="outline-2">
+<h2 id="org1233291"><span class="section-number-2">1.</span> SFINAE与std::enable_<sub>if实现原理</sub></h2>
+<div class="outline-text-2" id="text-1">
+<p>
+模板参数一般对可实例化的类型是有要求的，只是这种类型要求是​<b>隐式</b>​的（而不是如普通函数形参等显示指出的类型要求），而这可以被看作是一种​<b>鸭子类型</b>​ducking type要求。
+若实例化时模板实参最终不能满足要求，那么编译器将报错。
+</p>
+
+<p>
+当类模板具有偏特化时，一个模板实参的可选匹配模板将可能有多个，其中最偏特化的版本的匹配优先级最高。
+此外，这些偏特化模板对模板形参的隐式要求可以是相互不同的，比如某个偏特化版本可以隐式地要求模板实参需要具有某个特定成员。
+SFINAE所描述的语言机则是：​<b>当对具有多个偏特化的类模板进行实例化时，若当前模板实参不能满足当前模板的要求，编译器不会报错，而是先看看其它相关模板类是否能可以实例化当前模板实参</b>​。
+SFINAE可被用来实现​<b>编译时静态反射</b>​，其被大量应用于protobuf等具有静态反射需求的项目中。
+std::enable<sub>if依赖的语言基础之一就是SFINAE</sub>，其可以对某个模板可接受形参类型进行限制的，下面将讨论其实现原理。
+</p>
+
+<p>
+首先，我们先举例来看看std::enable<sub>if的用法</sub>，比如用其来限制某个模板函数仅可以接受int类型入参，如下：
+</p>
+<div class="org-src-container">
+<pre class="src src-cpp"><span style="font-weight: bold;">template</span> &lt;<span style="font-weight: bold;">typename</span> <span style="font-weight: bold; text-decoration: underline;">T</span>&gt;
+<span style="font-weight: bold;">typename</span> <span style="font-weight: bold; text-decoration: underline;">std</span>::<span style="font-weight: bold; text-decoration: underline;">enable_if</span>&lt;<span style="font-weight: bold; text-decoration: underline;">std</span>::<span style="font-weight: bold; text-decoration: underline;">is_integral</span>&lt;<span style="font-weight: bold; text-decoration: underline;">T</span>&gt;::value, <span style="font-weight: bold; text-decoration: underline;">int</span>&gt;::<span style="font-weight: bold; text-decoration: underline;">type</span> <span style="font-weight: bold;">f1</span>(<span style="font-weight: bold; text-decoration: underline;">T</span> <span style="font-weight: bold; font-style: italic;">i</span>) {<span style="font-weight: bold;">return</span> i;}
+
+<span style="font-weight: bold;">template</span> &lt;<span style="font-weight: bold;">typename</span> <span style="font-weight: bold; text-decoration: underline;">T</span>, <span style="font-weight: bold;">typename</span> = <span style="font-weight: bold;">typename</span> <span style="font-weight: bold; text-decoration: underline;">std</span>::<span style="font-weight: bold; text-decoration: underline;">enable_if</span>&lt;<span style="font-weight: bold; text-decoration: underline;">std</span>::<span style="font-weight: bold; text-decoration: underline;">is_integral</span>&lt;<span style="font-weight: bold; text-decoration: underline;">T</span>&gt;::value&gt;::type&gt;
+<span style="font-weight: bold; text-decoration: underline;">bool</span> <span style="font-weight: bold;">f2</span>(<span style="font-weight: bold; text-decoration: underline;">T</span> <span style="font-weight: bold; font-style: italic;">i</span>) { <span style="font-weight: bold;">return</span> i; }
+</pre>
+</div>
+<p>
+上面的两个函数模板f1/f2()都只能接收int/char/bool等整数类型的模板实参，其它类型的模板实参将导致编译器报错。
+</p>
+
+<p>
+std::enable<sub>if是具有偏特化的一个类模板</sub>，如下：
+</p>
+<div class="org-src-container">
+<pre class="src src-cpp"><span style="font-weight: bold;">template</span> &lt;<span style="font-weight: bold; text-decoration: underline;">bool</span>, <span style="font-weight: bold;">typename</span> <span style="font-weight: bold; text-decoration: underline;">T</span>=<span style="font-weight: bold; text-decoration: underline;">void</span>&gt; <span style="font-weight: bold;">struct</span> <span style="font-weight: bold; text-decoration: underline;">enable_if</span> {};  <span style="font-weight: bold; font-style: italic;">// </span><span style="font-weight: bold; font-style: italic;">&#38544;&#24335;&#20351;&#29992;type&#25104;&#21592;&#23558;&#29702;&#24212;&#23548;&#33268;&#25253;&#38169;&#65292;&#32780;SFINAE&#26426;&#21046;&#21017;&#20351;&#20854;&#19981;&#25253;&#38169;&#32780;&#32487;&#32493;&#21305;&#37197;&#20559;&#29305;&#21270;&#29256;</span>
+<span style="font-weight: bold;">template</span> &lt;<span style="font-weight: bold;">typename</span> <span style="font-weight: bold; text-decoration: underline;">T</span>&gt; <span style="font-weight: bold;">struct</span> <span style="font-weight: bold; text-decoration: underline;">enable_if</span>&lt;<span style="font-weight: bold; text-decoration: underline;">true</span>, <span style="font-weight: bold; text-decoration: underline;">T</span>&gt; { <span style="font-weight: bold;">using</span> <span style="font-weight: bold; text-decoration: underline;">type</span> = T; };  <span style="font-weight: bold; font-style: italic;">// </span><span style="font-weight: bold; font-style: italic;">&#20165;&#20559;&#29305;&#21270;&#29256;&#25165;&#26377;type&#25104;&#21592;</span>
+</pre>
+</div>
+<p>
+可以看出，其依赖偏特化优先匹配的语言机制。
+enable<sub>if的实现</sub>，仅偏特化版才有type成员，隐式地使用普通版的type成员将导致报错，而SFINAE机制则使其不报错而继续匹配偏特化版。
+对于前面的函数模板f1/2()，若模板实参不是int/char/bool等整数类型的模板实参, 那么enable<sub>if将不会被实例化为偏特化版</sub>，因此将没有type成员，进而报错​<code>error: no type named ‘type’ in ‘struct std::enable_if&lt;false, void&gt;’</code>​.
+</p>
+
+<p>
+std::enable<sub>if依赖偏特化匹配优先级高的语言特性</sub>。
+此外，SFINAE相关应用还可以使用函数重载时具有精确形参的的函数匹配优先级更高的特性。
+例如，可以通过下面的has<sub>typedef</sub><sub>iterator模板类来判断一个类型是否具有iterator成员</sub>，进而实现编译时静态反射：
+</p>
+<div class="org-src-container">
+<pre class="src src-cpp"><span style="font-weight: bold;">template</span> &lt;<span style="font-weight: bold;">typename</span> <span style="font-weight: bold; text-decoration: underline;">T</span>&gt;
+<span style="font-weight: bold;">struct</span> <span style="font-weight: bold; text-decoration: underline;">has_typedef_iterator</span> {
+   <span style="font-weight: bold;">typedef</span> <span style="font-weight: bold; text-decoration: underline;">char</span> <span style="font-weight: bold; text-decoration: underline;">yes</span>[1];
+   <span style="font-weight: bold;">typedef</span> <span style="font-weight: bold; text-decoration: underline;">char</span> <span style="font-weight: bold; text-decoration: underline;">no</span>[2];
+   <span style="font-weight: bold;">template</span> &lt;<span style="font-weight: bold;">typename</span> <span style="font-weight: bold; text-decoration: underline;">C</span>&gt; <span style="font-weight: bold;">static</span> <span style="font-weight: bold; text-decoration: underline;">yes</span>&amp; <span style="font-weight: bold;">test</span>(<span style="font-weight: bold;">typename</span> <span style="font-weight: bold; text-decoration: underline;">C</span>::<span style="font-weight: bold; text-decoration: underline;">iterator</span>*);  <span style="font-weight: bold; font-style: italic;">// </span><span style="font-weight: bold; font-style: italic;">&#20855;&#26377;iterator&#25104;&#21592;&#30340;&#31867;&#22411;&#23558;&#20248;&#20808;&#21305;&#37197;&#20043;</span>
+   <span style="font-weight: bold;">template</span> &lt;<span style="font-weight: bold;">typename</span>&gt; <span style="font-weight: bold;">static</span> <span style="font-weight: bold; text-decoration: underline;">no</span>&amp; <span style="font-weight: bold; font-style: italic;">test</span>(...);
+   <span style="font-weight: bold;">static</span> <span style="font-weight: bold;">const</span> <span style="font-weight: bold; text-decoration: underline;">bool</span> <span style="font-weight: bold; font-style: italic;">value</span> = <span style="font-weight: bold;">sizeof</span>(test&lt;<span style="font-weight: bold; text-decoration: underline;">T</span>&gt;(<span style="font-weight: bold; text-decoration: underline;">nullptr</span>)) == <span style="font-weight: bold;">sizeof</span>(<span style="font-weight: bold; text-decoration: underline;">yes</span>);
+};
+
+static_assert(!<span style="font-weight: bold; text-decoration: underline;">has_typedef_iterator</span>&lt;<span style="font-weight: bold; text-decoration: underline;">int</span>&gt;::value);  <span style="font-weight: bold; font-style: italic;">// </span><span style="font-weight: bold; font-style: italic;">&#21305;&#37197;test(...);</span>
+static_assert(<span style="font-weight: bold; text-decoration: underline;">has_typedef_iterator</span>&lt;<span style="font-weight: bold; text-decoration: underline;">std</span>::string&gt;::value);  <span style="font-weight: bold; font-style: italic;">// </span><span style="font-weight: bold; font-style: italic;">&#21305;&#37197;test(typename C::iterator*)</span>
+</pre>
+</div>
+<p>
+其中，int类型没有iterator成员，因此将匹配test(typename C::iterator*), 最终导致value为false, 而std::string iterator则相反。
+</p>
+
+<p>
+SFINAE的一个主要问题在于当模板实参不满足模板形参的隐式要求时，报错信息可能会长达上百行，这很容易让人找不到报错的根本原因。
+幸运的是，这个问题可以通过使用来static<sub>assert显示描述模板形参要求来缓解</sub>，具体可以参考Effective Modern C++ Item 27, 此处不再赘述。
+此外，随着编译器进步，报错信息也会被优化。
+</p>
+</div>
+</div>
+<div id="outline-container-orgd9aad29" class="outline-2">
+<h2 id="orgd9aad29"><span class="section-number-2">2.</span> C++ 20 Concept</h2>
+<div class="outline-text-2" id="text-2">
+<p>
+C++ 20提出concept以​<b>显示约束模板参数类型</b>​，其比基于SFINAE的std::enable<sub>if的编程体验更好</sub>。
+STL也使用concept进行了重构，以显示约束算法模板函数等的参数类型。
+例如，STL算法对iterator类型在C++ 20之前只是口头约定，编译器并不检测之，而C++ 20 STL则使用std::input<sub>iterator等concept来显示约束算法模板使用的iterator类型</sub>。
+</p>
+
+<p>
+下面以<a href="https://en.cppreference.com/w/cpp/language/constraints.html">cppreference</a>给的示例简要说明concept用法，如下：
+</p>
+<div class="org-src-container">
+<pre class="src src-cpp"><span style="font-weight: bold;">template</span>&lt;<span style="font-weight: bold;">typename</span> <span style="font-weight: bold; text-decoration: underline;">T</span>&gt;
+<span style="font-weight: bold;">concept</span> <span style="font-weight: bold; text-decoration: underline;">Hashable</span> = <span style="font-weight: bold;">requires</span>(<span style="font-weight: bold; text-decoration: underline;">T</span> <span style="font-weight: bold; font-style: italic;">a</span>)
+{
+    <span style="font-weight: bold; font-style: italic;">// </span><span style="font-weight: bold; font-style: italic;">std::hash&lt;T&gt;{}(a)&#35821;&#27861;&#21487;&#34892;&#65292;&#19988;decltype({...})&#28385;&#36275;convertible_to&lt;size_t&gt;&#32422;&#26463;</span>
+    { <span style="font-weight: bold; text-decoration: underline;">std</span>::<span style="font-weight: bold; text-decoration: underline;">hash</span>&lt;<span style="font-weight: bold; text-decoration: underline;">T</span>&gt;{}(a) } -&gt; <span style="font-weight: bold; text-decoration: underline;">std</span>::<span style="font-weight: bold; text-decoration: underline;">convertible_to</span>&lt;<span style="font-weight: bold; text-decoration: underline;">std</span>::size_t&gt;;
+};
+
+<span style="font-weight: bold;">template</span>&lt;<span style="font-weight: bold; text-decoration: underline;">Hashable</span> <span style="font-weight: bold; text-decoration: underline;">T</span>&gt; <span style="font-weight: bold; text-decoration: underline;">void</span> <span style="font-weight: bold;">f</span>(<span style="font-weight: bold; text-decoration: underline;">T</span>) {}
+
+<span style="font-weight: bold;">struct</span> <span style="font-weight: bold; text-decoration: underline;">meow</span> {};
+f(<span style="font-style: italic;">"abc"</span>);
+f(meow{});  <span style="font-weight: bold; font-style: italic;">// </span><span style="font-weight: bold; font-style: italic;">&#22833;&#36133;&#65292;&#22240;&#20026;std::hash&#26410;&#23545;meow&#29305;&#20363;&#21270;</span>
+</pre>
+</div>
+<p>
+上述代码中，template&lt;Hashable T&gt; f(T)的函数模板实参必须满足Hashable concept要求的条件，而meow类型不能满足该条件，因此f(meow{})将报错。
+下面再给一个简单示例：
+</p>
+<div class="org-src-container">
+<pre class="src src-cpp"><span style="font-weight: bold;">template</span>&lt;<span style="font-weight: bold;">typename</span> <span style="font-weight: bold; text-decoration: underline;">T</span>&gt; <span style="font-weight: bold;">concept</span> <span style="font-weight: bold; text-decoration: underline;">Test</span> = <span style="font-weight: bold;">requires</span>(<span style="font-weight: bold; text-decoration: underline;">T</span> <span style="font-weight: bold; font-style: italic;">t</span>) { {<span style="font-weight: bold;">sizeof</span>(T) == 1}; };
+<span style="font-weight: bold;">template</span> &lt;<span style="font-weight: bold; text-decoration: underline;">Test</span> <span style="font-weight: bold; text-decoration: underline;">T</span>&gt; <span style="font-weight: bold; text-decoration: underline;">void</span> <span style="font-weight: bold;">f</span>(<span style="font-weight: bold; text-decoration: underline;">T</span>); <span style="font-weight: bold; font-style: italic;">// </span><span style="font-weight: bold; font-style: italic;">f1</span>
+<span style="font-weight: bold; text-decoration: underline;">void</span> <span style="font-weight: bold;">f</span>(<span style="font-weight: bold; text-decoration: underline;">int</span>); <span style="font-weight: bold; font-style: italic;">// </span><span style="font-weight: bold; font-style: italic;">f2</span>
+f(<span style="font-style: italic;">'A'</span>);  <span style="font-weight: bold; font-style: italic;">// </span><span style="font-weight: bold; font-style: italic;">&#21305;&#37197;f1(T), &#22240;&#20026;'A'&#28385;&#36275;sizeof(T) == 1, &#19988;&#26356;&#29305;&#21270;</span>
+
+<span style="font-weight: bold;">template</span>&lt;<span style="font-weight: bold;">typename</span> <span style="font-weight: bold; text-decoration: underline;">T</span>&gt; <span style="font-weight: bold;">requires</span>(<span style="font-weight: bold;">sizeof</span>(<span style="font-weight: bold; text-decoration: underline;">T</span>) == 1)
+<span style="font-weight: bold; text-decoration: underline;">void</span> <span style="font-weight: bold;">g</span>(<span style="font-weight: bold; text-decoration: underline;">T</span>); <span style="font-weight: bold; font-style: italic;">// </span><span style="font-weight: bold; font-style: italic;">&#32422;&#26463;&#26465;&#20214;&#31561;&#20215;&#20110;f(T)</span>
+<span style="font-weight: bold; text-decoration: underline;">void</span> <span style="font-weight: bold;">g</span>(<span style="font-weight: bold; text-decoration: underline;">int</span>);
+</pre>
+</div>
+<p>
+上述代码注释已描述得足够清楚，这里就不再赘述了。
+</p>
+
+<p>
+从上述例子可以看出，concept的对模板参数的直接语法支持远比基于SFINAE的std::enable<sub>if优雅</sub>。
+此外，由于是语法层面的直接支持，编译器的concept相关报错信息也将比std::enable<sub>if方案更能说明出错根本原因</sub>。
+</p>
+</div>
+</div>
+<div id="outline-container-orga6b7bf5" class="outline-2">
+<h2 id="orga6b7bf5"><span class="section-number-2">3.</span> 参考文档</h2>
+<div class="outline-text-2" id="text-3">
+<ol class="org-ol">
+<li><a href="https://en.cppreference.com/w/cpp/types/enable_if.html">https://en.cppreference.com/w/cpp/types/enable_if.html</a></li>
+<li><a href="https://en.cppreference.com/w/cpp/language/constraints.html">https://en.cppreference.com/w/cpp/language/constraints.html</a></li>
+<li><a href="https://en.cppreference.com/w/cpp/language/requires.html">https://en.cppreference.com/w/cpp/language/requires.html</a></li>
+<li><a href="https://izualzhy.cn/SFINAE-and-enable_if">C++模板技术之SFINAE与enable<sub>if的使用</sub></a></li>
+</ol>
+</div>
+</div>
+
+    </div><!-- /.entry-content -->
+
+  </article>
+</section>
+        <section id="extras" class="body">
+        </section><!-- /#extras -->
+
+</body>
+</html>

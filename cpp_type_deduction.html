@@ -4,8 +4,9 @@
         <meta charset="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
         <meta name="generator" content="Pelican" />
-        <title>AZJF的博客</title>
+        <title>浅谈C++类型推导</title>
         <link rel="stylesheet" href="/theme/css/main.css" />
+        <meta name="description" content="1. 模板参数类型推导 2. auto 3. decltype 4. 参考文档 C++ 11引入了auto/decltype关键字来进行类型推导，其在一些场景中可以提高代码简洁性和可读性。..." />
 
         <style>
           /* #content { max-width: 60em; margin: auto; } */
@@ -236,97 +237,290 @@
                     <li><a href="https://github.com/azjf">关于</a></li>
                 </ul></nav>
         </header><!-- /#banner -->
-            <section id="content" class="body">
-                <ol id="posts-list" class="hfeed">
-        <li><article class="hentry">
-            <header>
-                <h1><a href="/futex.html" rel="bookmark"
-                       title="Permalink to 浅谈Linux Futex与用户态同步机制实现原理">浅谈Linux Futex与用户态同步机制实现原理</a></h1>
-            </header>
-            2025-05-24
-            | 分类: <a href="/category/linux.html">Linux</a>
-            | 标签: <a href="/tag/linux.html">Linux</a> <a href="/tag/futex.html">Futex</a> <a href="/tag/mutex.html">Mutex</a> <a href="/tag/conditional-variable.html">Conditional Variable</a> <a href="/tag/semaphore.html">Semaphore</a> <a href="/tag/hu-chi-suo.html">互斥锁</a> <a href="/tag/tiao-jian-bian-liang.html">条件变量</a> <a href="/tag/xin-hao-liang.html">信号量</a>         </article></li>
-        <li><article class="hentry">
-            <header>
-                <h1><a href="/sse.html" rel="bookmark"
-                       title="Permalink to Server-Sent Events (SSE)异步客户端实现">Server-Sent Events (SSE)异步客户端实现</a></h1>
-            </header>
-            2025-05-18
-            | 分类: <a href="/category/network.html">Network</a>
-            | 标签: <a href="/tag/network.html">Network</a> <a href="/tag/server-sent-events-sse.html">Server-Sent Events (SSE)</a> <a href="/tag/async-sse-client.html">Async SSE Client</a> <a href="/tag/yi-bu-sseke-hu-duan.html">异步SSE客户端</a>         </article></li>
-        <li><article class="hentry">
-            <header>
-                <h1><a href="/emacs_gdb.html" rel="bookmark"
-                       title="Permalink to Emacs GDB配置">Emacs GDB配置</a></h1>
-            </header>
-            2025-03-18
-            | 分类: <a href="/category/kai-fa-gong-ju.html">开发工具</a>
-            | 标签: <a href="/tag/kai-fa-gong-ju.html">开发工具</a> <a href="/tag/emacs.html">Emacs</a> <a href="/tag/gdb.html">GDB</a> <a href="/tag/gud-mode.html">GUD Mode</a>         </article></li>
-        <li><article class="hentry">
-            <header>
-                <h1><a href="/elfshim.html" rel="bookmark"
-                       title="Permalink to Android ROM移植: 记一次dlopen failed: cannot locate symbol解决过程">Android ROM移植: 记一次dlopen failed: cannot locate symbol解决过程</a></h1>
-            </header>
-            2025-01-12
-            | 分类: <a href="/category/android.html">Android</a>
-            | 标签: <a href="/tag/android.html">Android</a> <a href="/tag/dlopen-failed.html">dlopen failed</a> <a href="/tag/objdump.html">objdump</a> <a href="/tag/patchelf.html">patchelf</a>         </article></li>
-        <li><article class="hentry">
-            <header>
-                <h1><a href="/design_pattern.html" rel="bookmark"
-                       title="Permalink to 浅谈设计模式">浅谈设计模式</a></h1>
-            </header>
-            2024-07-14
-            | 分类: <a href="/category/design.html">Design</a>
-            | 标签: <a href="/tag/design.html">Design</a> <a href="/tag/design-pattern.html">Design Pattern</a> <a href="/tag/she-ji-mo-shi.html">设计模式</a>         </article></li>
-        <li><article class="hentry">
-            <header>
-                <h1><a href="/cpp_stl_list_sort.html" rel="bookmark"
-                       title="Permalink to 浅谈std::list::sort()实现原理">浅谈std::list::sort()实现原理</a></h1>
-            </header>
-            2024-05-05
-            | 分类: <a href="/category/c.html">C++</a>
-            | 标签: <a href="/tag/c.html">C++</a> <a href="/tag/stl.html">STL</a> <a href="/tag/list-sort.html">list sort</a> <a href="/tag/merge-sort.html">merge sort</a> <a href="/tag/gui-bing-pai-xu.html">归并排序</a>         </article></li>
-        <li><article class="hentry">
-            <header>
-                <h1><a href="/cpp_template_argument_constraint.html" rel="bookmark"
-                       title="Permalink to 浅谈C++模板参数类型约束">浅谈C++模板参数类型约束</a></h1>
-            </header>
-            2024-04-21
-            | 分类: <a href="/category/c.html">C++</a>
-            | 标签: <a href="/tag/c.html">C++</a> <a href="/tag/template.html">Template</a> <a href="/tag/template-argument-constraint.html">Template Argument Constraint</a> <a href="/tag/sfinae.html">SFINAE</a> <a href="/tag/enable_if.html">enable_if</a> <a href="/tag/concept.html">Concept</a> <a href="/tag/mo-ban-can-shu-lei-xing-yue-shu.html">模板参数类型约束</a>         </article></li>
-        <li><article class="hentry">
-            <header>
-                <h1><a href="/cpp_type_deduction.html" rel="bookmark"
-                       title="Permalink to 浅谈C++类型推导">浅谈C++类型推导</a></h1>
-            </header>
-            2024-04-14
-            | 分类: <a href="/category/c.html">C++</a>
-            | 标签: <a href="/tag/c.html">C++</a> <a href="/tag/type-deduction.html">Type Deduction</a> <a href="/tag/template-argument-type-deduction.html">Template Argument Type Deduction</a> <a href="/tag/auto.html">auto</a> <a href="/tag/decltype.html">decltype</a> <a href="/tag/lei-xing-tui-dao.html">类型推导</a> <a href="/tag/mo-ban-can-shu-lei-xing-tui-dao.html">模板参数类型推导</a>         </article></li>
-        <li><article class="hentry">
-            <header>
-                <h1><a href="/cpp_rvalue.html" rel="bookmark"
-                       title="Permalink to 浅谈C++右值/Universal引用和std::move/forward()实现原理">浅谈C++右值/Universal引用和std::move/forward()实现原理</a></h1>
-            </header>
-            2024-04-06
-            | 分类: <a href="/category/c.html">C++</a>
-            | 标签: <a href="/tag/c.html">C++</a> <a href="/tag/rvalue.html">RValue</a> <a href="/tag/move-semantics.html">Move Semantics</a> <a href="/tag/universal-reference.html">Universal Reference</a> <a href="/tag/stdmove.html">std::move()</a> <a href="/tag/stdforward.html">std::forward()</a> <a href="/tag/you-zhi.html">右值</a> <a href="/tag/yi-dong-yu-yi.html">移动语义</a> <a href="/tag/universalyin-yong.html">Universal引用</a>         </article></li>
-        <li><article class="hentry">
-            <header>
-                <h1><a href="/cpp_vs_java.html" rel="bookmark"
-                       title="Permalink to C++和Java特性对比">C++和Java特性对比</a></h1>
-            </header>
-            2024-03-03
-            | 分类: <a href="/category/c.html">C++</a>
-            | 标签: <a href="/tag/c.html">C++</a> <a href="/tag/java.html">Java</a>         </article></li>
-                </ol><!-- /#posts-list -->
-  <nav>
-    <ul>
-      <li>Page 1 / 2</li>
-        <li><a href="/index2.html">&rang;</a></li>
-        <li><a href="/index2.html">&Rang;</a></li>
-    </ul>
-  </nav>
-                </section><!-- /#content -->
+<section id="content" class="body">
+  <article>
+    <header>
+      <h1 class="entry-title">
+        <a href="/cpp_type_deduction.html" rel="bookmark"
+           title="Permalink to 浅谈C++类型推导">浅谈C++类型推导</a></h1>
+    </header>
+
+    <div class="entry-content">
+<footer class="post-info">
+        <abbr class="published" title="2024-04-14T00:00:00+08:00">
+                2024-04-14
+        </abbr>
+<p>分类: <a href="/category/c.html">C++</a></p>
+标签: <a href="/tag/c.html">C++</a> <a href="/tag/type-deduction.html">Type Deduction</a> <a href="/tag/template-argument-type-deduction.html">Template Argument Type Deduction</a> <a href="/tag/auto.html">auto</a> <a href="/tag/decltype.html">decltype</a> <a href="/tag/lei-xing-tui-dao.html">类型推导</a> <a href="/tag/mo-ban-can-shu-lei-xing-tui-dao.html">模板参数类型推导</a> 
+</footer><!-- /.post-info -->      <div id="table-of-contents" role="doc-toc">
+
+<div id="text-table-of-contents" role="doc-toc">
+<ul>
+<li><a href="#org62f6c1a">1. 模板参数类型推导</a></li>
+<li><a href="#orge6b5363">2. auto</a></li>
+<li><a href="#org01d84b1">3. decltype</a></li>
+<li><a href="#org054242c">4. 参考文档</a></li>
+</ul>
+</div>
+</div>
+<p>
+C++ 11引入了auto/decltype关键字来进行类型推导，其在一些场景中可以提高代码简洁性和可读性。
+auto关键字的类型推导规则基本上和模板参数类型推导规则一致，Effective Modern C++ Chapter 1对此有很详细的讨论，本文的主要参考内容也是该书。
+decltype可以原汁原味地返回变量名对应的变量类型，其可以完成auto关键字不能胜任的一些corner case任务。
+本文接下来将以较短的篇幅对这三者进行介绍，希望能对大家有所帮助。
+</p>
+<div id="outline-container-org62f6c1a" class="outline-2">
+<h2 id="org62f6c1a"><span class="section-number-2">1.</span> 模板参数类型推导</h2>
+<div class="outline-text-2" id="text-1">
+<p>
+对于函数模板 ​<code>template&lt;typename T&gt; f(T&amp;|T*|T&amp;&amp;|T)</code>​，其模板参数类型的可选类型包括T&amp;|T*|T&amp;&amp;|T.
+若f(ParamType)为f(T|&#x2026;)完成类型推导后的结果，那么ParamType则为类型推导完成后的实际函数入参类型。
+当函数实参为相关int类型时，类型推导结果如下：
+</p>
+<table border="2" cellspacing="0" cellpadding="6" rules="groups" frame="hsides">
+
+
+<colgroup>
+<col  class="org-left" />
+
+<col  class="org-left" />
+
+<col  class="org-left" />
+
+<col  class="org-left" />
+
+<col  class="org-left" />
+</colgroup>
+<tbody>
+<tr>
+<td class="org-left">类型</td>
+<td class="org-left">指导思想</td>
+<td class="org-left">ParamType</td>
+<td class="org-left">T</td>
+<td class="org-left">是否保留const/volatile属性</td>
+</tr>
+
+<tr>
+<td class="org-left">T</td>
+<td class="org-left">传值/复制</td>
+<td class="org-left">int</td>
+<td class="org-left">int</td>
+<td class="org-left">否</td>
+</tr>
+
+<tr>
+<td class="org-left">T&amp;, T*</td>
+<td class="org-left">传引用/指针</td>
+<td class="org-left">int&amp;, int*</td>
+<td class="org-left">int</td>
+<td class="org-left">是</td>
+</tr>
+
+<tr>
+<td class="org-left">T&amp;&amp;</td>
+<td class="org-left">完美转发</td>
+<td class="org-left">int&amp; (lvalue), int&amp;&amp; (rvalue)</td>
+<td class="org-left">int&amp; (lvalue), int (rvalue)</td>
+<td class="org-left">是</td>
+</tr>
+</tbody>
+</table>
+<p>
+其中，T的类型推导指导思想为确保f()的传参方式为传值，T&amp;/T*则为传引用/指针，而T&amp;&amp;则是为了确保f()可以实现完美转发。
+当模板参数类型为T时，const/volatile属性都不会被保留，这是传值复制规则规定的。
+例如，对于f(T), 若入参为const char * const ptr, 则ParamType和T推导结果都是const char *, 因为对const ptr进行复制时不会保留其const属性。
+</p>
+
+<p>
+当实参为数组时，f(T)传值复制规则下实参将被退化为指针，而f(T&amp;|T&amp;&amp;)则不会，其可以保留数组维度信息。
+例如，当函数实参为​<code>int a[N]</code>​时，类型推导结果如下：
+</p>
+<table border="2" cellspacing="0" cellpadding="6" rules="groups" frame="hsides">
+
+
+<colgroup>
+<col  class="org-left" />
+
+<col  class="org-left" />
+
+<col  class="org-left" />
+</colgroup>
+<tbody>
+<tr>
+<td class="org-left">类型</td>
+<td class="org-left">ParamType, T</td>
+<td class="org-left">备注</td>
+</tr>
+
+<tr>
+<td class="org-left">T</td>
+<td class="org-left">int*</td>
+<td class="org-left">退化为指针</td>
+</tr>
+
+<tr>
+<td class="org-left">T&amp;, T&amp;&amp;</td>
+<td class="org-left">int(&amp;)[N]</td>
+<td class="org-left">保留了数组维度信息</td>
+</tr>
+</tbody>
+</table>
+
+<p>
+函数实参也可能会被退化为函数指针，其在类型推导时会遵循和数组实参类似的规则。
+例如，当函数实参为​<code>void f(int)</code>​时，类型推导结果如下：
+</p>
+<table border="2" cellspacing="0" cellpadding="6" rules="groups" frame="hsides">
+
+
+<colgroup>
+<col  class="org-left" />
+
+<col  class="org-left" />
+
+<col  class="org-left" />
+</colgroup>
+<tbody>
+<tr>
+<td class="org-left">类型</td>
+<td class="org-left">ParamType, T</td>
+<td class="org-left">备注</td>
+</tr>
+
+<tr>
+<td class="org-left">T</td>
+<td class="org-left">void (*)(int)</td>
+<td class="org-left">退化为函数指针</td>
+</tr>
+
+<tr>
+<td class="org-left">T&amp;, T&amp;&amp;</td>
+<td class="org-left">void (&amp;)(int)</td>
+<td class="org-left">&#xa0;</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+<div id="outline-container-orge6b5363" class="outline-2">
+<h2 id="orge6b5363"><span class="section-number-2">2.</span> auto</h2>
+<div class="outline-text-2" id="text-2">
+<p>
+auto类型推导规则和template参数类型推导基本一致，它们之间的映射的关系如下：
+</p>
+<table border="2" cellspacing="0" cellpadding="6" rules="groups" frame="hsides">
+
+
+<colgroup>
+<col  class="org-left" />
+
+<col  class="org-left" />
+
+<col  class="org-left" />
+</colgroup>
+<tbody>
+<tr>
+<td class="org-left">auto</td>
+<td class="org-left">T</td>
+<td class="org-left">传值/复制</td>
+</tr>
+
+<tr>
+<td class="org-left">auto&amp;</td>
+<td class="org-left">T&amp;</td>
+<td class="org-left">传引用</td>
+</tr>
+
+<tr>
+<td class="org-left">auto&amp;&amp;</td>
+<td class="org-left">T&amp;&amp;</td>
+<td class="org-left">完美转发</td>
+</tr>
+</tbody>
+</table>
+
+<p>
+auto和template参数类型推导规则唯一不同之处在于当实参为初始化列表时（如​<code>auto il = {1, 2, 3}</code>​），此时auto的推导结果为std::initializer<sub>list</sub>&lt;T&gt;, 而函数模板参数推导则会失败。
+此外，当auto作为函数返回值或lambda入参类型时，auto类型推导规则将和template参数类型推导规则完全一致。
+</p>
+</div>
+</div>
+<div id="outline-container-org01d84b1" class="outline-2">
+<h2 id="org01d84b1"><span class="section-number-2">3.</span> decltype</h2>
+<div class="outline-text-2" id="text-3">
+<p>
+decltype可以原汁原味地不加任何修饰地返回变量名的类型， 其类型推导规则如下：
+</p>
+<table border="2" cellspacing="0" cellpadding="6" rules="groups" frame="hsides">
+
+
+<colgroup>
+<col  class="org-left" />
+
+<col  class="org-left" />
+</colgroup>
+<tbody>
+<tr>
+<td class="org-left">入参类型</td>
+<td class="org-left">推导结果</td>
+</tr>
+
+<tr>
+<td class="org-left">变量名</td>
+<td class="org-left">变量名对应的变量类型</td>
+</tr>
+
+<tr>
+<td class="org-left">lvalue表达式</td>
+<td class="org-left">T&amp;</td>
+</tr>
+
+<tr>
+<td class="org-left">xvalue表达式</td>
+<td class="org-left">T&amp;&amp;</td>
+</tr>
+
+<tr>
+<td class="org-left">prvalue表达式</td>
+<td class="org-left">T</td>
+</tr>
+</tbody>
+</table>
+
+<p>
+此外，C++ 14还引入了decltype(auto), 其主要被用于推导函数返回值类型。
+decltype(auto)采用的推导规则为decltype规则，而不是auto推导规则。
+decltype(auto)可以完成一些auto不能完成的任务，比如下面代码（源自Effective Modern C++ Item 3: Understand decltype）中的模板函数出参类型推导：
+</p>
+<div class="org-src-container">
+<pre class="src src-cpp"><span style="font-weight: bold;">template</span>&lt;<span style="font-weight: bold;">typename</span> <span style="font-weight: bold; text-decoration: underline;">Container</span>, <span style="font-weight: bold;">typename</span> <span style="font-weight: bold; text-decoration: underline;">Index</span>&gt;
+<span style="font-weight: bold;">decltype</span>(<span style="font-weight: bold;">auto</span>) <span style="font-weight: bold;">authAndAccess</span>(<span style="font-weight: bold; text-decoration: underline;">Container</span>&amp; <span style="font-weight: bold; font-style: italic;">c</span>, <span style="font-weight: bold; text-decoration: underline;">Index</span> <span style="font-weight: bold; font-style: italic;">i</span>) {
+    authenticateUser();
+    <span style="font-weight: bold;">return</span> c[i];
+}
+</pre>
+</div>
+<p>
+若仅使用auto, 那么出参类型推导规则为传值复制，最终推导结果将不是lvalue引用而不能满足需求。
+而decltype(auto)则采用decltype类型推导规则，其对lvalue表达式的推导结果为lvalue引用。
+</p>
+</div>
+</div>
+<div id="outline-container-org054242c" class="outline-2">
+<h2 id="org054242c"><span class="section-number-2">4.</span> 参考文档</h2>
+<div class="outline-text-2" id="text-4">
+<ol class="org-ol">
+<li>Effective Modern C++ Chapter 1: Deducing Types</li>
+<li><a href="https://en.cppreference.com/w/cpp/language/auto.html">https://en.cppreference.com/w/cpp/language/auto.html</a></li>
+<li><a href="https://en.cppreference.com/w/cpp/language/decltype.html">https://en.cppreference.com/w/cpp/language/decltype.html</a></li>
+</ol>
+</div>
+</div>
+
+    </div><!-- /.entry-content -->
+
+  </article>
+</section>
         <section id="extras" class="body">
         </section><!-- /#extras -->
 
