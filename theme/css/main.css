@@ -21,7 +21,7 @@ body {
     color: #000305;
     font-size: 87.5%; /* Base font size: 14px */
     font-family: 'Trebuchet MS', Trebuchet, 'Lucida Sans Unicode', 'Lucida Grande', 'Lucida Sans', Arial, sans-serif;
-    line-height: 1.429;
+    line-height: 1.6;
     margin: 0;
     padding: 0;
     text-align: left;
@@ -91,6 +91,7 @@ li { margin-top: 0.5em;
     float:right;
     margin:10px;
     padding:5px;
+    max-width: 40%;
 }
 
 .post-info p{
@@ -104,9 +105,22 @@ li { margin-top: 0.5em;
 
 .readmore { float: right }
 
-dl {margin: 0 0 1.5em 0;}
-dt {font-weight: bold;}
-dd {margin-left: 1.5em;}
+dl {
+  margin: 0.5em 0 0.8em 0.5em;
+  display: grid;
+  grid-template-columns: max-content auto;
+  grid-row-gap: 0.5em;
+  grid-column-gap: 1em;
+}
+
+dt {
+  font-weight: bold;
+  grid-column-start: 1;
+}
+
+dd {
+  grid-column-start: 2;
+}
 
 pre{background-color:  rgb(238, 238, 238); padding: 10px; margin: 10px; overflow: auto;}
 
