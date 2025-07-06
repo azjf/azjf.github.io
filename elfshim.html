@@ -256,21 +256,20 @@
 
 <div id="text-table-of-contents" role="doc-toc">
 <ul>
-<li><a href="#org03d062d">1. 问题描述</a></li>
-<li><a href="#orgeaedc41">2. 符号提供者查找</a></li>
-<li><a href="#org689c40f">3. Android源码分析</a></li>
-<li><a href="#org3b2bd01">4. 缺失符号<sub>ZN7android</sub>***实现方法</a></li>
-<li><a href="#org5ed97b0">5. Android构建系统融入</a></li>
-<li><a href="#org61c61c1">6. 总结</a></li>
+<li><a href="#org19795a3">1. 问题描述</a></li>
+<li><a href="#orge64c2d6">2. 符号提供者查找</a></li>
+<li><a href="#orgd2f52a2">3. Android源码分析</a></li>
+<li><a href="#org6f28028">4. 缺失符号<sub>ZN7android</sub>***实现方法</a></li>
+<li><a href="#org7f80d22">5. Android构建系统融入</a></li>
+<li><a href="#org0eaca49">6. 总结</a></li>
 </ul>
 </div>
 </div>
 <p>
 本文记录一次Android ROM移植过程中遇到的dlopen failed: cannot locate symbol问题的解决过程，希望能对遇到类似问题的Android ROM移植爱好者有所启示。
 </p>
-
-<div id="outline-container-org03d062d" class="outline-2">
-<h2 id="org03d062d"><span class="section-number-2">1.</span> 问题描述</h2>
+<div id="outline-container-org19795a3" class="outline-2">
+<h2 id="org19795a3"><span class="section-number-2">1.</span> 问题描述</h2>
 <div class="outline-text-2" id="text-1">
 <p>
 在移植小米13 LineageOS 22.1 (Android 15)时，遇到了这个这个报错​<code>Abort message: 'could not dlopen c2.dolby.hevc.dec.so: dlopen failed: cannot locate symbol "_ZN7android8hardware5media2c24V1_05utils6objcpyEPNS3_10WorkBundleERKNSt3__14listINS7_10unique_ptrI6C2WorkNS7_14default_deleteISA_EEEENS7_9allocatorISD_EEEEPNS4_16BufferPoolSenderE" referenced by "/vendor/lib64/c2.dolby.client.so"...'</code>​.
@@ -278,9 +277,8 @@
 </p>
 </div>
 </div>
-
-<div id="outline-container-orgeaedc41" class="outline-2">
-<h2 id="orgeaedc41"><span class="section-number-2">2.</span> 符号提供者查找</h2>
+<div id="outline-container-orge64c2d6" class="outline-2">
+<h2 id="orge64c2d6"><span class="section-number-2">2.</span> 符号提供者查找</h2>
 <div class="outline-text-2" id="text-2">
 <p>
 首先，我们在使用objdump在原stock rom中查找一下该符号的提供者，可以使用如下命令：
@@ -294,7 +292,7 @@
 <p>
 结果如下：
 </p>
-<pre class="example" id="org9cc250a">
+<pre class="example" id="orgcf7cd4e">
 0000000000000000      DF *UND*  0000000000000000  Base        _ZN7android8hardware5media2c24V1_05utils6objcpyEPNS3_10WorkBundleERKNSt3__14listINS7_10unique_ptrI6C2WorkNS7_14default_deleteISA_EEEENS7_9allocatorISD_EEEEPNS4_16BufferPoolSenderE
 vendor/lib64/c2.dolby.client.so
 0000000000050920 g    DF .text  0000000000000008  Base        _ZN7android8hardware5media2c24V1_05utils6objcpyEPNS3_10WorkBundleERKNSt3__14listINS7_10unique_ptrI6C2WorkNS7_14default_deleteISA_EEEENS7_9allocatorISD_EEEEPNS4_16BufferPoolSenderE
@@ -313,20 +311,19 @@ vendor/lib/libcodec2_hidl@1.0.so
 </p>
 </div>
 </div>
-
-<div id="outline-container-org689c40f" class="outline-2">
-<h2 id="org689c40f"><span class="section-number-2">3.</span> Android源码分析</h2>
+<div id="outline-container-orgd2f52a2" class="outline-2">
+<h2 id="orgd2f52a2"><span class="section-number-2">3.</span> Android源码分析</h2>
 <div class="outline-text-2" id="text-3">
 <p>
 首先，先用​<code>c++filt</code>​对该符号demangle一下，可以得到如下结果：
 </p>
-<pre class="example" id="org32b2ffa">
+<pre class="example" id="org12fc03f">
 android::hardware::media::c2::V1_0::utils::objcpy(android::hardware::media::c2::V1_0::WorkBundle*, std::__1::list&lt;std::__1::unique_ptr&lt;C2Work, std::__1::default_delete&lt;C2Work&gt; &gt;, std::__1::allocator&lt;std::__1::unique_ptr&lt;C2Work, std::__1::default_delete&lt;C2Work&gt; &gt; &gt; &gt; const&amp;, android::hardware::media::c2::V1_0::utils::BufferPoolSender*)
 </pre>
 <p>
 简化一下可以得：
 </p>
-<pre class="example" id="orge542a06">
+<pre class="example" id="org921c29b">
 android::hardware::media::c2::V1_0::utils::objcpy(android::hardware::media::c2::V1_0::WorkBundle*, list&lt;unique_ptr&lt;C2Work&gt;&gt; const&amp;, android::hardware::media::c2::V1_0::utils::BufferPoolSender*)
 </pre>
 
@@ -382,9 +379,8 @@ android::hardware::media::c2::V1_0::utils::objcpy(android::hardware::media::c2::
 </p>
 </div>
 </div>
-
-<div id="outline-container-org3b2bd01" class="outline-2">
-<h2 id="org3b2bd01"><span class="section-number-2">4.</span> 缺失符号<sub>ZN7android</sub>***实现方法</h2>
+<div id="outline-container-org6f28028" class="outline-2">
+<h2 id="org6f28028"><span class="section-number-2">4.</span> 缺失符号<sub>ZN7android</sub>***实现方法</h2>
 <div class="outline-text-2" id="text-4">
 <p>
 由于可以Android 14 BufferPoolSender对象强转为Android 15 BufferPoolSender对象，因此缺失符号<sub>ZN7android</sub>***可通过透传调用Android 15 objcpy来实现，如下：
@@ -430,15 +426,14 @@ bool _ZN7android8hardware5media2c24V1_05utils6objcpyEPNS3_10WorkBundleERKNSt3__1
 </p>
 </div>
 </div>
-
-<div id="outline-container-org5ed97b0" class="outline-2">
-<h2 id="org5ed97b0"><span class="section-number-2">5.</span> Android构建系统融入</h2>
+<div id="outline-container-org7f80d22" class="outline-2">
+<h2 id="org7f80d22"><span class="section-number-2">5.</span> Android构建系统融入</h2>
 <div class="outline-text-2" id="text-5">
 <p>
 现代Android一般使用Soong来构建简单新模块，因此本文也将如此。
 libcodec2<sub>hidl</sub>@1.0<sub>shim模块的构建规则文件Android.bp如下</sub>：
 </p>
-<pre class="example" id="org462200c">
+<pre class="example" id="org3e7a422">
 cc_library_shared {
     name: "libcodec2_hidl@1.0_shim",
     include_dirs: [
@@ -465,7 +460,7 @@ cc_library_shared {
 为了让extract util能够自动给c2.dolby.hevc.dec.so添加libcodec2<sub>hidl</sub>@1.0<sub>shim.so依赖</sub>，需要在extract-files.py中加入如下代码：
 </p>
 <div class="org-src-container">
-<pre class="src src-python"><span style="font-weight: bold; font-style: italic;">blob_fixups</span>: blob_fixups_user_type = {
+<pre class="src src-python"><span style="font-weight: bold; font-style: italic;">blob_fixups</span>: <span style="font-weight: bold; text-decoration: underline;">blob_fixups_user_type</span> = {
     <span style="font-style: italic;">'vendor/lib64/c2.dolby.hevc.dec.so'</span>: blob_fixup()
         .add_needed(<span style="font-style: italic;">"libcodec2_hidl@1.0_shim.so"</span>),
 }
@@ -484,9 +479,8 @@ cc_library_shared {
 </p>
 </div>
 </div>
-
-<div id="outline-container-org61c61c1" class="outline-2">
-<h2 id="org61c61c1"><span class="section-number-2">6.</span> 总结</h2>
+<div id="outline-container-org0eaca49" class="outline-2">
+<h2 id="org0eaca49"><span class="section-number-2">6.</span> 总结</h2>
 <div class="outline-text-2" id="text-6">
 <p>
 Android新版本可能因采用新实现方法而会缺少某些vendor blob依赖的老版本符号，而这些老版本符号一般可以通过透传调用新版本符号来实现。
