@@ -256,17 +256,17 @@
 
 <div id="text-table-of-contents" role="doc-toc">
 <ul>
-<li><a href="#orgd55b01f">1. SSE简介</a></li>
-<li><a href="#org7e4438d">2. 基于Apache HttpAsyncClient的异步SSE客户端实现</a>
+<li><a href="#org1cde0ca">1. SSE简介</a></li>
+<li><a href="#orge8307a1">2. 基于Apache HttpAsyncClient的异步SSE客户端实现</a>
 <ul>
-<li><a href="#org1b47179">2.1. HttpAsyncClient接口简介</a></li>
-<li><a href="#orgbda21ea">2.2. SSE粘包与拆包</a></li>
-<li><a href="#orgd8f3071">2.3. SSE异步回调接口</a></li>
-<li><a href="#org2ec3e56">2.4. 核心实现</a></li>
+<li><a href="#orgb85e832">2.1. HttpAsyncClient接口简介</a></li>
+<li><a href="#orgf279c23">2.2. SSE粘包与拆包</a></li>
+<li><a href="#orgf336792">2.3. SSE异步回调接口</a></li>
+<li><a href="#org06dfb80">2.4. 核心实现</a></li>
 </ul>
 </li>
-<li><a href="#orgab5e081">3. 基于Sogou Workflow的异步SSE客户端实现方法概述</a></li>
-<li><a href="#org5757379">4. 总结</a></li>
+<li><a href="#orgffcfe75">3. 基于Sogou Workflow的异步SSE客户端实现方法概述</a></li>
+<li><a href="#orgbe22864">4. 总结</a></li>
 </ul>
 </div>
 </div>
@@ -274,15 +274,15 @@
 最近遇到了一个解析和转发基于HTTP Server-Sent Events (SSE)应用协议的需求，其实现方法和普通HTTP接口调用差异较大。
 本文将讨论该协议的异步客户端实现方法，希望能帮助到遇到类似需求的人。
 </p>
-<div id="outline-container-orgd55b01f" class="outline-2">
-<h2 id="orgd55b01f"><span class="section-number-2">1.</span> SSE简介</h2>
+<div id="outline-container-org1cde0ca" class="outline-2">
+<h2 id="org1cde0ca"><span class="section-number-2">1.</span> SSE简介</h2>
 <div class="outline-text-2" id="text-1">
 <p>
 SSE是一种基于HTTP的服务端向客户端推送消息的格式，其可以基于HTTP 1实现，比WebSocket简单。
 SSE本质上是服务端通过一个长链接向客户端不停地推送消息，如<a href="https://www.ruanyifeng.com/blog/2017/05/server-sent_events.html">下图</a>所示：
 </p>
 
-<div id="org21c93fe" class="figure">
+<div id="orgc22a502" class="figure">
 <p><img src="https://github.com/azjf/azjf.github.io/raw/main/img/35/FD5FDD-FE99-49CB-8419-08A3B279015B/sse.jpg" alt="sse.jpg" width="400px" />
 </p>
 </div>
@@ -305,15 +305,15 @@ SSE本质上是服务端通过一个长链接向客户端不停地推送消息�
 </p>
 </div>
 </div>
-<div id="outline-container-org7e4438d" class="outline-2">
-<h2 id="org7e4438d"><span class="section-number-2">2.</span> 基于Apache HttpAsyncClient的异步SSE客户端实现</h2>
+<div id="outline-container-orge8307a1" class="outline-2">
+<h2 id="orge8307a1"><span class="section-number-2">2.</span> 基于Apache HttpAsyncClient的异步SSE客户端实现</h2>
 <div class="outline-text-2" id="text-2">
 <p>
 正如前文所言，中转SSE协议时不能使用普通的同步Apache HttpClient, 而是需要使用异步的Apache HttpAsyncClient，其可以实现每收到一点服务端数据后就回调某个用户自定义函数来处理之。
 </p>
 </div>
-<div id="outline-container-org1b47179" class="outline-3">
-<h3 id="org1b47179"><span class="section-number-3">2.1.</span> HttpAsyncClient接口简介</h3>
+<div id="outline-container-orgb85e832" class="outline-3">
+<h3 id="orgb85e832"><span class="section-number-3">2.1.</span> HttpAsyncClient接口简介</h3>
 <div class="outline-text-3" id="text-2-1">
 <p>
 Apache HttpAsyncClient底层基于Java NIO, 其提供了异步接口来接收HTTP响应，该接口实现了Reactor语义，如下：
@@ -345,8 +345,8 @@ FutureCallback#completed/failed()则分别在收到完整响应/出错时被回�
 </p>
 </div>
 </div>
-<div id="outline-container-orgbda21ea" class="outline-3">
-<h3 id="orgbda21ea"><span class="section-number-3">2.2.</span> SSE粘包与拆包</h3>
+<div id="outline-container-orgf279c23" class="outline-3">
+<h3 id="orgf279c23"><span class="section-number-3">2.2.</span> SSE粘包与拆包</h3>
 <div class="outline-text-3" id="text-2-2">
 <p>
 Apache HttpAsyncClient AsyncCharConsumer#onCharReceived()收到只是数据片段，而非一个完整的SSE event, 因此会遇到类似于TCP粘包的问题。
@@ -385,8 +385,8 @@ Apache HttpAsyncClient AsyncCharConsumer#onCharReceived()收到只是数据片�
 </div>
 </div>
 </div>
-<div id="outline-container-orgd8f3071" class="outline-3">
-<h3 id="orgd8f3071"><span class="section-number-3">2.3.</span> SSE异步回调接口</h3>
+<div id="outline-container-orgf336792" class="outline-3">
+<h3 id="orgf336792"><span class="section-number-3">2.3.</span> SSE异步回调接口</h3>
 <div class="outline-text-3" id="text-2-3">
 <p>
 一般而言，异步客户端在接收消息的不同阶段（如每收到一块数据，收到全部数据，数据接收时发送错误）一般需要回调不同的函数，因此可以仿照RxJava Observer接口定义一下异步SSE客户端回调接口，如下：
@@ -425,8 +425,8 @@ onNext()返回类型为boolean, 目的是用户可以在接收过程中终止接
 </p>
 </div>
 </div>
-<div id="outline-container-org2ec3e56" class="outline-3">
-<h3 id="org2ec3e56"><span class="section-number-3">2.4.</span> 核心实现</h3>
+<div id="outline-container-org06dfb80" class="outline-3">
+<h3 id="org06dfb80"><span class="section-number-3">2.4.</span> 核心实现</h3>
 <div class="outline-text-3" id="text-2-4">
 <p>
 在上述内容的基础上，可以比较直观地实现异步SSE客户端，核心逻辑如下：
@@ -487,8 +487,8 @@ client.execute(
 </div>
 </div>
 </div>
-<div id="outline-container-orgab5e081" class="outline-2">
-<h2 id="orgab5e081"><span class="section-number-2">3.</span> 基于Sogou Workflow的异步SSE客户端实现方法概述</h2>
+<div id="outline-container-orgffcfe75" class="outline-2">
+<h2 id="orgffcfe75"><span class="section-number-2">3.</span> 基于Sogou Workflow的异步SSE客户端实现方法概述</h2>
 <div class="outline-text-2" id="text-3">
 <p>
 在程序的某部分采用了异步接口后，代码中将充斥着大量callback (除非其它模块对将其转为同步), 而这些callback相比同步代码而言可读性一般较差。
@@ -509,8 +509,8 @@ Workflow虽然原生支持HTTP协议，但未提供SSE协议支持。
 </ol>
 </div>
 </div>
-<div id="outline-container-org5757379" class="outline-2">
-<h2 id="org5757379"><span class="section-number-2">4.</span> 总结</h2>
+<div id="outline-container-orgbe22864" class="outline-2">
+<h2 id="orgbe22864"><span class="section-number-2">4.</span> 总结</h2>
 <div class="outline-text-2" id="text-4">
 <p>
 本文介绍了SSE协议以及其异步客户端实现方法，希望能对大家有所帮助。

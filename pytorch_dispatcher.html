@@ -1,0 +1,1158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <meta name="generator" content="Pelican" />
+        <title>浅析PyTorch Dispatcher源码</title>
+        <link rel="stylesheet" href="/theme/css/main.css" />
+        <meta name="description" content="1. Dispatcher问题背景与实现原理 2. 源码分析 2.1. DispatchKey和DispatchKeySet 2.1.1. DispatchKey 2.1.2. DispatchKeySet 2.2...." />
+
+        <style>
+          /* #content { max-width: 60em; margin: auto; } */
+          .title  { text-align: center;
+                     margin-bottom: .2em; }
+          .subtitle { text-align: center;
+                      font-size: medium;
+                      font-weight: bold;
+                      margin-top:0; }
+          .todo   { font-family: monospace; color: red; }
+          .done   { font-family: monospace; color: green; }
+          .priority { font-family: monospace; color: orange; }
+          .tag    { background-color: #eee; font-family: monospace;
+                    padding: 2px; font-size: 80%; font-weight: normal; }
+          .timestamp { color: #bebebe; }
+          .timestamp-kwd { color: #5f9ea0; }
+          .org-right  { margin-left: auto; margin-right: 0px;  text-align: right; }
+          .org-left   { margin-left: 0px;  margin-right: auto; text-align: left; }
+          .org-center { margin-left: auto; margin-right: auto; text-align: center; }
+          .underline { text-decoration: underline; }
+          #postamble p, #preamble p { font-size: 90%; margin: .2em; }
+          p.verse { margin-left: 3%; }
+          pre {
+            border: 1px solid #e6e6e6;
+            border-radius: 3px;
+            background-color: #f2f2f2;
+            padding: 8pt;
+            font-family: monospace;
+            overflow: auto;
+            margin: 1.2em;
+          }
+          pre.src {
+            position: relative;
+            overflow: auto;
+          }
+          pre.src:before {
+            display: none;
+            position: absolute;
+            top: -8px;
+            right: 12px;
+            padding: 3px;
+            color: #555;
+            background-color: #f2f2f299;
+          }
+          pre.src:hover:before { display: inline; margin-top: 14px;}
+          /* Languages per Org manual */
+          pre.src-asymptote:before { content: 'Asymptote'; }
+          pre.src-awk:before { content: 'Awk'; }
+          pre.src-authinfo::before { content: 'Authinfo'; }
+          pre.src-C:before { content: 'C'; }
+          /* pre.src-C++ doesn't work in CSS */
+          pre.src-clojure:before { content: 'Clojure'; }
+          pre.src-css:before { content: 'CSS'; }
+          pre.src-D:before { content: 'D'; }
+          pre.src-ditaa:before { content: 'ditaa'; }
+          pre.src-dot:before { content: 'Graphviz'; }
+          pre.src-calc:before { content: 'Emacs Calc'; }
+          pre.src-emacs-lisp:before { content: 'Emacs Lisp'; }
+          pre.src-fortran:before { content: 'Fortran'; }
+          pre.src-gnuplot:before { content: 'gnuplot'; }
+          pre.src-haskell:before { content: 'Haskell'; }
+          pre.src-hledger:before { content: 'hledger'; }
+          pre.src-java:before { content: 'Java'; }
+          pre.src-js:before { content: 'Javascript'; }
+          pre.src-latex:before { content: 'LaTeX'; }
+          pre.src-ledger:before { content: 'Ledger'; }
+          pre.src-lisp:before { content: 'Lisp'; }
+          pre.src-lilypond:before { content: 'Lilypond'; }
+          pre.src-lua:before { content: 'Lua'; }
+          pre.src-matlab:before { content: 'MATLAB'; }
+          pre.src-mscgen:before { content: 'Mscgen'; }
+          pre.src-ocaml:before { content: 'Objective Caml'; }
+          pre.src-octave:before { content: 'Octave'; }
+          pre.src-org:before { content: 'Org mode'; }
+          pre.src-oz:before { content: 'OZ'; }
+          pre.src-plantuml:before { content: 'Plantuml'; }
+          pre.src-processing:before { content: 'Processing.js'; }
+          pre.src-python:before { content: 'Python'; }
+          pre.src-R:before { content: 'R'; }
+          pre.src-ruby:before { content: 'Ruby'; }
+          pre.src-sass:before { content: 'Sass'; }
+          pre.src-scheme:before { content: 'Scheme'; }
+          pre.src-screen:before { content: 'Gnu Screen'; }
+          pre.src-sed:before { content: 'Sed'; }
+          pre.src-sh:before { content: 'shell'; }
+          pre.src-sql:before { content: 'SQL'; }
+          pre.src-sqlite:before { content: 'SQLite'; }
+          /* additional languages in org.el's org-babel-load-languages alist */
+          pre.src-forth:before { content: 'Forth'; }
+          pre.src-io:before { content: 'IO'; }
+          pre.src-J:before { content: 'J'; }
+          pre.src-makefile:before { content: 'Makefile'; }
+          pre.src-maxima:before { content: 'Maxima'; }
+          pre.src-perl:before { content: 'Perl'; }
+          pre.src-picolisp:before { content: 'Pico Lisp'; }
+          pre.src-scala:before { content: 'Scala'; }
+          pre.src-shell:before { content: 'Shell Script'; }
+          pre.src-ebnf2ps:before { content: 'ebfn2ps'; }
+          /* additional language identifiers per "defun org-babel-execute"
+               in ob-*.el */
+          pre.src-cpp:before  { content: 'C++'; }
+          pre.src-abc:before  { content: 'ABC'; }
+          pre.src-coq:before  { content: 'Coq'; }
+          pre.src-groovy:before  { content: 'Groovy'; }
+          /* additional language identifiers from org-babel-shell-names in
+             ob-shell.el: ob-shell is the only babel language using a lambda to put
+             the execution function name together. */
+          pre.src-bash:before  { content: 'bash'; }
+          pre.src-csh:before  { content: 'csh'; }
+          pre.src-ash:before  { content: 'ash'; }
+          pre.src-dash:before  { content: 'dash'; }
+          pre.src-ksh:before  { content: 'ksh'; }
+          pre.src-mksh:before  { content: 'mksh'; }
+          pre.src-posh:before  { content: 'posh'; }
+          /* Additional Emacs modes also supported by the LaTeX listings package */
+          pre.src-ada:before { content: 'Ada'; }
+          pre.src-asm:before { content: 'Assembler'; }
+          pre.src-caml:before { content: 'Caml'; }
+          pre.src-delphi:before { content: 'Delphi'; }
+          pre.src-html:before { content: 'HTML'; }
+          pre.src-idl:before { content: 'IDL'; }
+          pre.src-mercury:before { content: 'Mercury'; }
+          pre.src-metapost:before { content: 'MetaPost'; }
+          pre.src-modula-2:before { content: 'Modula-2'; }
+          pre.src-pascal:before { content: 'Pascal'; }
+          pre.src-ps:before { content: 'PostScript'; }
+          pre.src-prolog:before { content: 'Prolog'; }
+          pre.src-simula:before { content: 'Simula'; }
+          pre.src-tcl:before { content: 'tcl'; }
+          pre.src-tex:before { content: 'TeX'; }
+          pre.src-plain-tex:before { content: 'Plain TeX'; }
+          pre.src-verilog:before { content: 'Verilog'; }
+          pre.src-vhdl:before { content: 'VHDL'; }
+          pre.src-xml:before { content: 'XML'; }
+          pre.src-nxml:before { content: 'XML'; }
+          /* add a generic configuration mode; LaTeX export needs an additional
+             (add-to-list 'org-latex-listings-langs '(conf " ")) in .emacs */
+          pre.src-conf:before { content: 'Configuration File'; }
+
+          table { border-collapse:collapse; }
+          caption.t-above { caption-side: top; }
+          caption.t-bottom { caption-side: bottom; }
+          td, th { vertical-align:top;  }
+          th.org-right  { text-align: center;  }
+          th.org-left   { text-align: center;   }
+          th.org-center { text-align: center; }
+          td.org-right  { text-align: right;  }
+          td.org-left   { text-align: left;   }
+          td.org-center { text-align: center; }
+          dt { font-weight: bold; }
+          .footpara { display: inline; }
+          .footdef  { margin-bottom: 1em; }
+          .figure { padding: 1em; }
+          .figure p { text-align: center; }
+          .equation-container {
+            display: table;
+            text-align: center;
+            width: 100%;
+          }
+          .equation {
+            vertical-align: middle;
+          }
+          .equation-label {
+            display: table-cell;
+            text-align: right;
+            vertical-align: middle;
+          }
+          .inlinetask {
+            padding: 10px;
+            border: 2px solid gray;
+            margin: 10px;
+            background: #ffffcc;
+          }
+          #org-div-home-and-up
+           { text-align: right; font-size: 70%; white-space: nowrap; }
+          textarea { overflow-x: auto; }
+          .linenr { font-size: smaller }
+          .code-highlighted { background-color: #ffff00; }
+          .org-info-js_info-navigation { border-style: none; }
+          #org-info-js_console-label
+            { font-size: 10px; font-weight: bold; white-space: nowrap; }
+          .org-info-js_search-highlight
+            { background-color: #ffff00; color: #000000; font-weight: bold; }
+          .org-svg { }
+        </style>
+
+        <script>
+          window.MathJax = {
+            tex: {
+              ams: {
+                multlineWidth: '85%'
+              },
+              tags: 'ams',
+              tagSide: 'right',
+              tagIndent: '.8em'
+            },
+            chtml: {
+              scale: 1.0,
+              displayAlign: 'center',
+              displayIndent: '0em'
+            },
+            svg: {
+              scale: 1.0,
+              displayAlign: 'center',
+              displayIndent: '0em'
+            },
+            output: {
+              font: 'mathjax-modern',
+              displayOverflow: 'overflow'
+            }
+          };
+        </script>
+
+        <script
+          id="MathJax-script"
+          async
+          src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js">
+        </script>
+</head>
+
+<body id="index" class="home">
+        <header id="banner" class="body">
+                <nav><ul>
+                    <li><a href="/">首页</a></li>
+                    <li><a href="/categories.html">分类</a></li>
+                    <li><a href="/tags.html">标签</a></li>
+                    <li><a href="/archives.html">归档</a></li>
+                    <li><a href="https://github.com/azjf">关于</a></li>
+                </ul></nav>
+        </header><!-- /#banner -->
+<section id="content" class="body">
+  <article>
+    <header>
+      <h1 class="entry-title">
+        <a href="/pytorch_dispatcher.html" rel="bookmark"
+           title="Permalink to 浅析PyTorch Dispatcher源码">浅析PyTorch Dispatcher源码</a></h1>
+    </header>
+
+    <div class="entry-content">
+<footer class="post-info">
+        <abbr class="published" title="2025-07-06T00:00:00+08:00">
+                2025-07-06
+        </abbr>
+<p>分类: <a href="/category/pytorch.html">PyTorch</a></p>
+标签: <a href="/tag/pytorch.html">PyTorch</a> <a href="/tag/dispatcher.html">Dispatcher</a> <a href="/tag/dispatchkey.html">DispatchKey</a> <a href="/tag/expression-problem.html">Expression Problem</a> <a href="/tag/multiple-dispatch.html">Multiple Dispatch</a> 
+</footer><!-- /.post-info -->      <div id="table-of-contents" role="doc-toc">
+
+<div id="text-table-of-contents" role="doc-toc">
+<ul>
+<li><a href="#org85bd5f9">1. Dispatcher问题背景与实现原理</a></li>
+<li><a href="#org5262962">2. 源码分析</a>
+<ul>
+<li><a href="#org7d89b92">2.1. DispatchKey和DispatchKeySet</a>
+<ul>
+<li><a href="#orgb0bc76a">2.1.1. DispatchKey</a></li>
+<li><a href="#org0071457">2.1.2. DispatchKeySet</a></li>
+</ul>
+</li>
+<li><a href="#org835d726">2.2. KernelFunction表与算子注册</a>
+<ul>
+<li><a href="#orgde42f52">2.2.1. KernelFunction表相关数据结构</a></li>
+<li><a href="#org607ad19">2.2.2. 算子注册</a></li>
+</ul>
+</li>
+<li><a href="#org292202c">2.3. 运行时链路</a>
+<ul>
+<li><a href="#org3595751">2.3.1. 查找OperatorHandle</a></li>
+<li><a href="#org665b4f2">2.3.2. 执行OperatorHandle</a></li>
+<li><a href="#orga74a529">2.3.3. 计算DispatchKeySet</a></li>
+<li><a href="#orga6943d6">2.3.4. 查找KernelFunction</a></li>
+<li><a href="#orgd5e90f4">2.3.5. 调用KernelFunction</a></li>
+<li><a href="#orge635d9b">2.3.6. redispatch</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li><a href="#org66ec463">3. 参考文档</a></li>
+</ul>
+</div>
+</div>
+<p>
+本文将先介绍PyTorch dispatcher实现原理，然后再浅析<a href="https://github.com/pytorch/pytorch/tree/v2.7.1">v2.7.1</a>版实现源码，希望能对大家有所帮助。
+在继续阅读下文之前，建议先阅读PyTorch核心开发者Edward Z. Yang的<a href="https://blog.ezyang.com/2020/09/lets-talk-about-the-pytorch-dispatcher/">Let’s talk about the PyTorch dispatcher</a>以对dispatcher核心原理有所认识, 本文原理部分也主要参考了这篇文章。
+</p>
+<div id="outline-container-org85bd5f9" class="outline-2">
+<h2 id="org85bd5f9"><span class="section-number-2">1.</span> Dispatcher问题背景与实现原理</h2>
+<div class="outline-text-2" id="text-1">
+<p>
+PyTorch目前可以在CPU/CUDA/FPGA等多种后端设备上支持上千个算子，并且随着时间发展，PyTorch还需要不断支持新设备和新算子。
+因此，PyTorch在代码架构设计上需要具有极强的可扩展性，而这目前是通过dispatcher来实现的。
+Dispatcher在PyTorch代码架构中具有核心的作用，用Edward Z. Yang的话来说就是it is a really important abstraction for how we structure our code internally.
+</p>
+
+<p>
+Dispatcher要解决的需要同时支持新设备和算子的扩展问题在本质上是<a href="https://en.wikipedia.org/wiki/Expression_problem">expression problem</a>, 目前其并没有较好的通用解法。
+例如，在编译器领域，该<a href="https://craftinginterpreters.com/representing-code.html#the-expression-problem">问题</a>为如何高效地给<a href="https://craftinginterpreters.com/image/representing-code/table.png">下图</a>所示的表同时新增行和列。
+</p>
+
+<div id="org246dbba" class="figure">
+<p><img src="https://github.com/azjf/azjf.github.io/raw/main/img/71/9C0C82-8BA6-4173-8061-471AA0969F96/2025-07-06_13-53-17_table.png" alt="2025-07-06_13-53-17_table.png" width="500px" />
+</p>
+</div>
+
+<p>
+面向对象编程可以较好地解决新增行的问题，而函数式编程则可以较好地支持新增列（面向对象编程可以用visitor设计模式来模拟之）。
+但是，目前并没有很好的办法来支持同时新增行和列。
+</p>
+
+<p>
+在PyTorch中，本问题的表行索引为算子，列索引为DispatchKey (描述CPU/CUDA等设备后端，和Autograd/Tracing等PyTorch功能)，表格单元则为KernelFunction（某个算子为某个DispatchKey提供的功能实现），如<a href="https://blog.ezyang.com/img/pytorch-dispatcher/slide-14.png">下图</a>所示：
+</p>
+
+<div id="orga1eaa95" class="figure">
+<p><img src="https://github.com/azjf/azjf.github.io/raw/main/img/71/9C0C82-8BA6-4173-8061-471AA0969F96/2025-07-06_14-50-49_slide-14.png" alt="2025-07-06_14-50-49_slide-14.png" width="300px" />
+</p>
+</div>
+
+<p>
+Dispatcher对本问题的解法如下：
+</p>
+<ol class="org-ol">
+<li>首先，完全解耦合掉本问题的行（算子）和列（DispatchKey）, 其基础管理单元为表中的单元格（KernelFunction）。</li>
+<li><p>
+然后，通过一个控制中枢来管理表中的所有KernelFunction，并在运行时综合考虑算子入参和thread local变量等各个因素（用DispatchKey来描述）来选取出一个KernelFunction来执行，如<a href="https://blog.ezyang.com/img/pytorch-dispatcher/slide-06.png">下图</a>所示：
+</p>
+
+<div id="org869f858" class="figure">
+<p><img src="https://github.com/azjf/azjf.github.io/raw/main/img/71/9C0C82-8BA6-4173-8061-471AA0969F96/2025-07-06_14-53-44_slide-06.png" alt="2025-07-06_14-53-44_slide-06.png" width="300px" />
+</p>
+</div>
+
+<p>
+“综合考虑各种因素后再选取一个KernelFunction”本质上还解决了另外一个叫做<a href="https://en.wikipedia.org/wiki/Multiple_dispatch">multiple dispatch</a>的问题。
+C++虚函数仅支持single-dispatch, 因此用C++解决本问题时需要使用一些技巧，具体可以参考More Effective C++ Item 31: Making functions virtual with respect to more than one object.
+除了上述的根据DispatchKey来dispatch外，KernelFunction内部还可能会根据tensor dtype来进一步dispatch, 其实现为简单的switch语句，本文将不讨论之。
+</p></li>
+</ol>
+
+<p>
+因此，dispatcher实现的关键在于如何描述上述KernelFucntion表，以及如何描述和综合被用于选取表中KernelFunction的因素（DispatchKey），下一小节将根据源码来分析其具体实现。
+</p>
+</div>
+</div>
+<div id="outline-container-org5262962" class="outline-2">
+<h2 id="org5262962"><span class="section-number-2">2.</span> 源码分析</h2>
+<div class="outline-text-2" id="text-2">
+</div>
+<div id="outline-container-org7d89b92" class="outline-3">
+<h3 id="org7d89b92"><span class="section-number-3">2.1.</span> DispatchKey和DispatchKeySet</h3>
+<div class="outline-text-3" id="text-2-1">
+<p>
+对于某个算子，其不止要适配CPU/CUDA/FPGA等设备后端，还需要适配Autograd/Tracing等PyTorch功能。
+此外，Autograd等PyTorch功能需要对CPU/CUDA等可功能定制后端进行适配。
+例如，Autograd的设备后端定制版包括AutogradCPU/AutogradCUDA/AutogradHIP等。
+</p>
+
+<p>
+​<b>DispatchKey的功能为表达这些KernelFunction选取因素，而DispatchKeySet的功能则为综合多个DispatchKey并根据合成结果计算出KernelFunction表的列索引</b>​，下面将对两者进行详解。
+</p>
+</div>
+<div id="outline-container-orgb0bc76a" class="outline-4">
+<h4 id="orgb0bc76a"><span class="section-number-4">2.1.1.</span> DispatchKey</h4>
+<div class="outline-text-4" id="text-2-1-1">
+<p>
+Dispatcher使用DispatchKey来表达这些KernelFunction选取因素的，其在实现上是一个uint16<sub>t枚举类</sub>，每一个KernelFunction选取因子都对于一个枚举项，如下：
+</p>
+<div class="org-src-container">
+<pre class="src src-cpp"><span style="font-weight: bold;">enum</span> <span style="font-weight: bold;">class</span> <span style="font-weight: bold; text-decoration: underline;">DispatchKey</span> : <span style="font-weight: bold; text-decoration: underline;">uint16_t</span> {
+  <span style="font-weight: bold; font-style: italic;">// </span><span style="font-weight: bold; font-style: italic;">~~~~~~~~~~~~~~~~~~~~~~~~~~ UNDEFINED ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ //</span>
+  <span style="font-weight: bold; font-style: italic;">Undefined</span> = 0,
+  <span style="font-weight: bold; font-style: italic;">CatchAll</span> = Undefined,
+
+  <span style="font-weight: bold; font-style: italic;">// </span><span style="font-weight: bold; font-style: italic;">~~~~~~~~~~~~~~~~~~~~~~~~~~ Functionality Keys ~~~~~~~~~~~~~~~~~~~~~~ //</span>
+  <span style="font-weight: bold; font-style: italic;">Dense</span>,
+  <span style="font-weight: bold; font-style: italic;">FPGA</span>,
+  ...
+  <span style="font-weight: bold; font-style: italic;">EndOfFunctionalityKeys</span>, <span style="font-weight: bold; font-style: italic;">// </span><span style="font-weight: bold; font-style: italic;">End of functionality keys.</span>
+
+  <span style="font-weight: bold; font-style: italic;">// </span><span style="font-weight: bold; font-style: italic;">~~~~~~~~~~~~~~ "Dense" Per-Backend Dispatch keys ~~~~~~~~~~~~~~~~~~~~ //</span>
+<span style="font-weight: bold;">#define</span> <span style="font-weight: bold;">DEFINE_PER_BACKEND_KEYS_FOR_BACKEND</span>(<span style="font-weight: bold; font-style: italic;">n</span>, <span style="font-weight: bold; font-style: italic;">prefix</span>) prefix##n,
+<span style="font-weight: bold;">#define</span> <span style="font-weight: bold;">DEFINE_PER_BACKEND_KEYS</span>(<span style="font-weight: bold; font-style: italic;">fullname</span>, <span style="font-weight: bold; font-style: italic;">prefix</span>)      \
+    StartOf##fullname##Backends,                         \
+        C10_FORALL_BACKEND_COMPONENTS(                   \
+            DEFINE_PER_BACKEND_KEYS_FOR_BACKEND, prefix) \
+            EndOf##fullname##Backends = prefix##Meta,
+    <span style="font-weight: bold; font-style: italic;">C10_FORALL_FUNCTIONALITY_KEYS</span>(DEFINE_PER_BACKEND_KEYS)
+<span style="font-weight: bold;">#undef</span> DEFINE_PER_BACKEND_KEYS
+<span style="font-weight: bold;">#undef</span> DEFINE_PER_BACKEND_KEYS_FOR_BACKEND
+
+  EndOfRuntimeBackendKeys = EndOfAutogradFunctionalityBackends,
+
+  <span style="font-weight: bold; font-style: italic;">// </span><span style="font-weight: bold; font-style: italic;">~~~~~~~~~~~~~~~~~~~~~~ Alias Dispatch Keys ~~~~~~~~~~~~~~~~~~~~~~~~~~ //</span>
+  <span style="font-weight: bold; font-style: italic;">// </span><span style="font-weight: bold; font-style: italic;">Alias dispatch keys are synthetic dispatch keys which map to multiple runtime dispatch keys.</span>
+  <span style="font-weight: bold; font-style: italic;">Autograd</span>,
+  <span style="font-weight: bold; font-style: italic;">CompositeImplicitAutograd</span>,
+  ...
+  <span style="font-weight: bold; font-style: italic;">StartOfAliasKeys</span> = Autograd,
+  <span style="font-weight: bold; font-style: italic;">EndOfAliasKeys</span> = CompositeExplicitAutogradNonFunctional,
+
+  <span style="font-weight: bold; font-style: italic;">// </span><span style="font-weight: bold; font-style: italic;">~~~~~~~~~~~~~~~~~~~~~~~~~ BC ALIASES ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ //</span>
+  <span style="font-weight: bold; font-style: italic;">// </span><span style="font-weight: bold; font-style: italic;">The aliases exist for backwards compatibility reasons, they shouldn't be used</span>
+  <span style="font-weight: bold; font-style: italic;">CPUTensorId</span> = CPU,
+  <span style="font-weight: bold; font-style: italic;">CUDATensorId</span> = CUDA,
+  <span style="font-weight: bold; font-style: italic;">DefaultBackend</span> = CompositeExplicitAutograd,
+  <span style="font-weight: bold; font-style: italic;">PrivateUse1_PreAutograd</span> = AutogradPrivateUse1,
+  <span style="font-weight: bold; font-style: italic;">PrivateUse2_PreAutograd</span> = AutogradPrivateUse2,
+  <span style="font-weight: bold; font-style: italic;">PrivateUse3_PreAutograd</span> = AutogradPrivateUse3,
+  <span style="font-weight: bold; font-style: italic;">Autocast</span> = AutocastCUDA,
+};
+</pre>
+</div>
+<p>
+可以看出，DispatchKey可以分为Functionality / Per-Backend / Alias / BC (backwards compatibility)这几类。
+另外，为了可维护性，代码使用​<code>C10_FORALL_FUNCTIONALITY_KEYS(DEFINE_PER_BACKEND_KEYS)</code>​宏来生成Autograd等PyTorch功能对设备后端适配的结果对应的DispatchKey枚举项。
+</p>
+</div>
+</div>
+<div id="outline-container-org0071457" class="outline-4">
+<h4 id="org0071457"><span class="section-number-4">2.1.2.</span> DispatchKeySet</h4>
+<div class="outline-text-4" id="text-2-1-2">
+<p>
+DispatchKeySet的功能为​<b>综合多个DispatchKey (实现了multiple-dispatch)</b>​, 并根据合成结果计算出​<b>KernelFunction表的列索引</b>​。
+DispatchKey自身无法较好地完成这些任务，原因如下：
+</p>
+<ol class="org-ol">
+<li>Alias和Per-Backend Functionality等DispatchKey枚举项不会对应到KernelFunction表的列索引。</li>
+<li>Per-Backend DispatchKey枚举项之间的信息具有冗余（比如AutogradCPU和AutogradCUDA都对应Autograd），因此在融合这些枚举项前需要拆分出其functionality和backend信息。</li>
+</ol>
+
+<p>
+DispatchKeySet可以从DispathKey中提取出functionality和backend信息，因此多个DispatchKeySet之间可以之间使用位运算来融合。
+DispatchKeySet用一个uint64<sub>t数据成员存储提取处理来的functionality和backend信息</sub>，如下图所示：
+</p>
+<p width="800px">
+<img src="https://github.com/azjf/azjf.github.io/raw/main/img/71/9C0C82-8BA6-4173-8061-471AA0969F96/dispatch_key_set.png" alt="dispatch_key_set.png" width="800px" />
+​<b>在dispatcher选取KernelFunction时，functionality和backend之间是有优先级的，DispatchKeySet在高bit位存储具有高优先级的functionality和backend</b>​，如上图所示。
+</p>
+
+<p>
+DispatchKey与DispatchKeySet bit位以及KernelFunction表列索引之间的关系如下：
+</p>
+<table border="2" cellspacing="0" cellpadding="6" rules="groups" frame="hsides">
+
+
+<colgroup>
+<col  class="org-left" />
+
+<col  class="org-left" />
+
+<col  class="org-left" />
+</colgroup>
+<tbody>
+<tr>
+<td class="org-left">DispatchKey类型</td>
+<td class="org-left">是否为一种DispatchKeySet bit位</td>
+<td class="org-left">是否对应一个KernelFunction表列索引</td>
+</tr>
+
+<tr>
+<td class="org-left">可定制的backend (BackendComponent中所有DispatchKey)</td>
+<td class="org-left">是</td>
+<td class="org-left">否</td>
+</tr>
+
+<tr>
+<td class="org-left">Per-Backend Functionality DispatchKey自身</td>
+<td class="org-left">是</td>
+<td class="org-left">否</td>
+</tr>
+
+<tr>
+<td class="org-left">Per-Backend Functionality DispatchKey定制实例</td>
+<td class="org-left">否（但可以转化为两个bit为1的DispatchKeySet）</td>
+<td class="org-left">是</td>
+</tr>
+
+<tr>
+<td class="org-left">不可自定义的后端</td>
+<td class="org-left">是</td>
+<td class="org-left">是</td>
+</tr>
+
+<tr>
+<td class="org-left">不可自定义的功能</td>
+<td class="org-left">是</td>
+<td class="org-left">是</td>
+</tr>
+</tbody>
+</table>
+
+<p>
+DispatchKeySet的代码实现如下：
+</p>
+<div class="org-src-container">
+<pre class="src src-cpp"><span style="font-weight: bold; font-style: italic;">// </span><span style="font-weight: bold; font-style: italic;">A representation of a set of DispatchKeys. A DispatchKeySet contains both "functionality" bits and "backend bits", and every tensor holds its own DispatchKeySet.</span>
+<span style="font-weight: bold;">class</span> <span style="font-weight: bold; text-decoration: underline;">DispatchKeySet</span> <span style="font-weight: bold;">final</span> {
+ <span style="font-weight: bold;">public</span>:
+  <span style="font-weight: bold; font-style: italic;">// </span><span style="font-weight: bold; font-style: italic;">&#20174;DispatchKey&#20013;&#25552;&#21462;functionality&#21644;backend&#20449;&#24687;</span>
+  <span style="font-weight: bold;">constexpr</span> <span style="font-weight: bold;">explicit</span> <span style="font-weight: bold;">DispatchKeySet</span>(<span style="font-weight: bold; text-decoration: underline;">DispatchKey</span> <span style="font-weight: bold; font-style: italic;">k</span>) { ... }
+
+  <span style="font-weight: bold; font-style: italic;">// </span><span style="font-weight: bold; font-style: italic;">&#34701;&#21512;&#22810;&#20010;DispatchKeySet&#20197;&#23454;&#29616;multiple-dispatch</span>
+  <span style="font-weight: bold;">constexpr</span> <span style="font-weight: bold; text-decoration: underline;">DispatchKeySet</span> <span style="font-weight: bold;">operator</span><span style="font-weight: bold;">|</span>(<span style="font-weight: bold; text-decoration: underline;">DispatchKeySet</span> <span style="font-weight: bold; font-style: italic;">other</span>) <span style="font-weight: bold;">const</span> {
+    <span style="font-weight: bold;">return</span> DispatchKeySet(repr_ | other.repr_);
+  }
+
+  <span style="font-weight: bold; font-style: italic;">// </span><span style="font-weight: bold; font-style: italic;">&#35745;&#31639;DispatchKeySet&#23545;&#24212;&#30340;KernelFunction&#34920;&#21015;&#32034;&#24341;</span>
+  <span style="font-weight: bold; text-decoration: underline;">int</span> <span style="font-weight: bold;">getDispatchTableIndexForDispatchKeySet</span>() <span style="font-weight: bold;">const</span> {
+    <span style="font-weight: bold;">auto</span> <span style="font-weight: bold; font-style: italic;">functionality_idx</span> =
+        DispatchKeySet(repr_ &gt;&gt; num_backends).indexOfHighestBit();
+    <span style="font-weight: bold;">auto</span> <span style="font-weight: bold; font-style: italic;">offset_and_mask</span> = offsetsAndMasks()[functionality_idx];
+    <span style="font-weight: bold;">auto</span> <span style="font-weight: bold; font-style: italic;">backend_idx</span> =
+        DispatchKeySet((<span style="font-weight: bold; text-decoration: underline;">repr_</span> &amp; <span style="font-weight: bold; font-style: italic;">offset_and_mask</span>.mask) &gt;&gt; 1).indexOfHighestBit();
+    <span style="font-weight: bold;">return</span> offset_and_mask.offset + backend_idx;
+  }
+
+ <span style="font-weight: bold;">private</span>:
+  <span style="font-weight: bold;">constexpr</span> <span style="font-weight: bold;">DispatchKeySet</span>(<span style="font-weight: bold; text-decoration: underline;">uint64_t</span> <span style="font-weight: bold; font-style: italic;">repr</span>) : repr_(repr) {}
+  <span style="font-weight: bold; text-decoration: underline;">uint64_t</span> <span style="font-weight: bold; font-style: italic;">repr_</span> = 0;
+};
+</pre>
+</div>
+<p>
+其中，​<code>DispatchKeySet(DispatchKey k)</code>​构造函数被用于从DispatchKey中提取functionality和backend信息，而​<code>operator|(DispatchKeySet other)</code>​等运算符重载函数则被用于融合多个DispatchKeySet.
+DispatchKeySet的最终目的是计算KernelFunction表列索引，其由​<code>getDispatchTableIndexForDispatchKeySet()</code>​来实现。
+在本人极简编译的PyTorch v2.7.1版中，KernelFunction表一共有132列。
+</p>
+
+<p>
+​<code>getDispatchTableIndexForDispatchKeySet()</code>​依赖的​<code>offsetsAndMasks()</code>​数组的计算方法如下：
+</p>
+<div class="org-src-container">
+<pre class="src src-cpp"><span style="font-weight: bold; text-decoration: underline;">std</span>::<span style="font-weight: bold; text-decoration: underline;">array</span>&lt;FunctionalityOffsetAndMask, num_functionality_keys&gt;
+<span style="font-weight: bold;">initializeFunctionalityOffsetsAndMasks</span>() {
+  <span style="font-weight: bold; text-decoration: underline;">std</span>::<span style="font-weight: bold; text-decoration: underline;">array</span>&lt;FunctionalityOffsetAndMask, num_functionality_keys&gt;
+      <span style="font-weight: bold; font-style: italic;">offsets_and_masks</span>;
+  <span style="font-weight: bold; font-style: italic;">// </span><span style="font-weight: bold; font-style: italic;">manually set the first entry, which corresponds to Undefined.</span>
+  offsets_and_masks[0] = FunctionalityOffsetAndMask(0, 0);
+  <span style="font-weight: bold; font-style: italic;">// </span><span style="font-weight: bold; font-style: italic;">loop through every functionality key (aside from Undefined).</span>
+  <span style="font-weight: bold;">for</span> (<span style="font-weight: bold;">const</span> <span style="font-weight: bold;">auto</span> <span style="font-weight: bold; font-style: italic;">functionality_idx</span> : <span style="font-weight: bold; text-decoration: underline;">c10</span>::irange(1, num_functionality_keys)) {
+    <span style="font-weight: bold; font-style: italic;">// </span><span style="font-weight: bold; font-style: italic;">functionality_idx should be Dense -&gt; 1, ...</span>
+    <span style="font-weight: bold;">auto</span> <span style="font-weight: bold; font-style: italic;">prev_offset_and_mask</span> = offsets_and_masks[functionality_idx - 1];
+    <span style="font-weight: bold;">auto</span> <span style="font-weight: bold; font-style: italic;">k</span> = <span style="font-weight: bold;">static_cast</span>&lt;DispatchKey&gt;(functionality_idx);
+
+    <span style="font-weight: bold; font-style: italic;">// </span><span style="font-weight: bold; font-style: italic;">If the previous functionality was not per-backend, then we can just</span>
+    <span style="font-weight: bold; font-style: italic;">// </span><span style="font-weight: bold; font-style: italic;">increment the previous offset. Otherwise, the next offset =</span>
+    <span style="font-weight: bold; font-style: italic;">// </span><span style="font-weight: bold; font-style: italic;">previous_offset + num_backends.</span>
+    <span style="font-weight: bold;">auto</span> <span style="font-weight: bold; font-style: italic;">next_offset</span> = prev_offset_and_mask.offset +
+        (prev_offset_and_mask.mask == 0 ? 1 : num_backends);
+    <span style="font-weight: bold; font-style: italic;">// </span><span style="font-weight: bold; font-style: italic;">the mask is used in the runtime index calculation to find the offset of</span>
+    <span style="font-weight: bold; font-style: italic;">// </span><span style="font-weight: bold; font-style: italic;">the backend. For non-per-backend functionalities, this offset should</span>
+    <span style="font-weight: bold; font-style: italic;">// </span><span style="font-weight: bold; font-style: italic;">always be 0. Otherwise, we need to get the index of the backend (which we</span>
+    <span style="font-weight: bold; font-style: italic;">// </span><span style="font-weight: bold; font-style: italic;">can do using a backend mask).</span>
+    <span style="font-weight: bold;">auto</span> <span style="font-weight: bold; font-style: italic;">next_mask</span> = isPerBackendFunctionalityKey(k) ? full_backend_mask : 0;
+    offsets_and_masks[functionality_idx] =
+        FunctionalityOffsetAndMask(next_offset, next_mask);
+  }
+  <span style="font-weight: bold;">return</span> offsets_and_masks;
+}
+</pre>
+</div>
+<p>
+再结合结​<code>getDispatchTableIndexForDispatchKeySet()</code>​代码可以看出，一个普通functionality对应KernelFunction表一列，而一个per-backend functionality则对应num<sub>backends列</sub>。
+</p>
+</div>
+</div>
+</div>
+<div id="outline-container-org835d726" class="outline-3">
+<h3 id="org835d726"><span class="section-number-3">2.2.</span> KernelFunction表与算子注册</h3>
+<div class="outline-text-3" id="text-2-2">
+</div>
+<div id="outline-container-orgde42f52" class="outline-4">
+<h4 id="orgde42f52"><span class="section-number-4">2.2.1.</span> KernelFunction表相关数据结构</h4>
+<div class="outline-text-4" id="text-2-2-1">
+<p>
+KernelFunction表是一个二维表，行索引为算子，列索引为DispatchKey.
+PyTorth将KernelFunction表存储于Dispatcher::operators<sub>和Dispatcher</sub>::operatorLookupTable<sub>中</sub>，如下：
+</p>
+<div class="org-src-container">
+<pre class="src src-cpp"><span style="font-weight: bold;">class</span> <span style="font-weight: bold; text-decoration: underline;">TORCH_API</span> <span style="font-weight: bold; text-decoration: underline;">Dispatcher</span> <span style="font-weight: bold;">final</span> {
+ <span style="font-weight: bold;">private</span>:
+  <span style="font-weight: bold; text-decoration: underline;">std</span>::<span style="font-weight: bold; text-decoration: underline;">list</span>&lt;OperatorDef&gt; <span style="font-weight: bold; font-style: italic;">operators_</span>;
+  <span style="font-weight: bold; text-decoration: underline;">LeftRight</span>&lt;<span style="font-weight: bold; text-decoration: underline;">ska</span>::<span style="font-weight: bold; text-decoration: underline;">flat_hash_map</span>&lt;OperatorName, OperatorHandle&gt;&gt;
+      <span style="font-weight: bold; font-style: italic;">operatorLookupTable_</span>;
+};
+</pre>
+</div>
+<p>
+其中，operators<sub>中的OperatorDef存储了每个算子对应所有KernelFunction</sub>, operatorLookupTable<sub>表则将可以根据算子名查找到OperatorHandle</sub>, 而OperatorHandle本质上是指向OperatorDef的handle, 其定义如下：
+</p>
+<div class="org-src-container">
+<pre class="src src-cpp"><span style="font-weight: bold;">class</span> <span style="font-weight: bold; text-decoration: underline;">TORCH_API</span> <span style="font-weight: bold; text-decoration: underline;">OperatorHandle</span> {
+ <span style="font-weight: bold;">private</span>:
+  <span style="font-weight: bold; text-decoration: underline;">Dispatcher</span>::<span style="font-weight: bold; text-decoration: underline;">OperatorDef</span>* <span style="font-weight: bold; font-style: italic;">operatorDef_</span>;
+  <span style="font-weight: bold; text-decoration: underline;">std</span>::<span style="font-weight: bold; text-decoration: underline;">list</span>&lt;<span style="font-weight: bold; text-decoration: underline;">Dispatcher</span>::OperatorDef&gt;::<span style="font-weight: bold; text-decoration: underline;">iterator</span> <span style="font-weight: bold; font-style: italic;">operatorIterator_</span>;
+};
+</pre>
+</div>
+<p>
+OperatorDef的定义如下：
+</p>
+<div class="org-src-container">
+<pre class="src src-cpp"><span style="font-weight: bold;">struct</span> <span style="font-weight: bold; text-decoration: underline;">OperatorDef</span> <span style="font-weight: bold;">final</span> {
+  <span style="font-weight: bold;">explicit</span> <span style="font-weight: bold;">OperatorDef</span>(<span style="font-weight: bold; text-decoration: underline;">OperatorName</span>&amp;&amp; <span style="font-weight: bold; font-style: italic;">op_name</span>) : op(<span style="font-weight: bold; text-decoration: underline;">std</span>::move(op_name)) {}
+  <span style="font-weight: bold; text-decoration: underline;">impl</span>::<span style="font-weight: bold; text-decoration: underline;">OperatorEntry</span> <span style="font-weight: bold; font-style: italic;">op</span>;
+  <span style="font-weight: bold; text-decoration: underline;">size_t</span> <span style="font-weight: bold; font-style: italic;">def_count</span> = 0;
+  <span style="font-weight: bold; text-decoration: underline;">size_t</span> <span style="font-weight: bold; font-style: italic;">def_and_impl_count</span> = 0;
+};
+</pre>
+</div>
+<p>
+从中可以看出，OperatorDef的主要功能是给OperatorEntry提供引用计数，而OperatorEntry才是真正的实体, 其定义如下：
+</p>
+<div class="org-src-container">
+<pre class="src src-cpp"><span style="font-weight: bold;">class</span> <span style="font-weight: bold; text-decoration: underline;">TORCH_API</span> <span style="font-weight: bold; text-decoration: underline;">OperatorEntry</span> <span style="font-weight: bold;">final</span> {
+ <span style="font-weight: bold;">private</span>:
+  <span style="font-weight: bold; text-decoration: underline;">OperatorName</span> <span style="font-weight: bold; font-style: italic;">name_</span>;
+  <span style="font-weight: bold; text-decoration: underline;">std</span>::<span style="font-weight: bold; text-decoration: underline;">optional</span>&lt;AnnotatedSchema&gt; <span style="font-weight: bold; font-style: italic;">schema_</span>;
+  <span style="font-weight: bold; text-decoration: underline;">std</span>::<span style="font-weight: bold; text-decoration: underline;">array</span>&lt;KernelFunction, <span style="font-weight: bold; text-decoration: underline;">c10</span>::num_runtime_entries&gt; <span style="font-weight: bold; font-style: italic;">dispatchTable_</span>;
+
+  <span style="font-weight: bold; text-decoration: underline;">DispatchKeyExtractor</span> <span style="font-weight: bold; font-style: italic;">dispatchKeyExtractor_</span>;
+
+  <span style="font-weight: bold; text-decoration: underline;">ska</span>::<span style="font-weight: bold; text-decoration: underline;">flat_hash_map</span>&lt;
+      DispatchKey,
+<span style="font-weight: bold;">#ifdef</span> C10_DISPATCHER_ONE_KERNEL_PER_DISPATCH_KEY
+      <span style="font-weight: bold; font-style: italic;">// </span><span style="font-weight: bold; font-style: italic;">On mobile, we needn't worry about Jupyter notebooks.</span>
+      <span style="font-weight: bold; text-decoration: underline;">std</span>::<span style="font-weight: bold; text-decoration: underline;">array</span>&lt;AnnotatedKernel, 1&gt;
+<span style="font-weight: bold;">#else</span>
+      <span style="font-weight: bold; text-decoration: underline;">std</span>::<span style="font-weight: bold; text-decoration: underline;">list</span>&lt;AnnotatedKernel&gt;
+<span style="font-weight: bold;">#endif</span>
+      &gt;
+      <span style="font-weight: bold; font-style: italic;">kernels_</span>;
+};
+</pre>
+</div>
+<p>
+其中，dispatchTable<sub>数组存储了一个算子对应的所有KernelFunction</sub> (某个DispatchKey对应的数组索引可以使用根据​<code>DispatchKeySet::getDispatchTableIndexForDispatchKeySet()</code>​来计算), 而dispatchKeyExtractor<sub>则是算子专有的DispatchKey提取器</sub>（每个算子的DispatchKey提取规则各不相同），而kernels_ map则被用于记录当前算子为每一个DispatchKey注册过的KernelFunction (一个DispatchKey可以被注册多个KernelFunction, 但仅最新注册的有效)。
+</p>
+</div>
+</div>
+<div id="outline-container-org607ad19" class="outline-4">
+<h4 id="org607ad19"><span class="section-number-4">2.2.2.</span> 算子注册</h4>
+<div class="outline-text-4" id="text-2-2-2">
+<p>
+PyTorch算子注册方式包括TORCH<sub>LIBRARY</sub> API和RegisterOperators两种，官方更推荐TORCH<sub>LIBRARY</sub> API, 两者最终都通过调用​<code>Dispatcher::registerDef()</code>​和​<code>Dispatcher::registerImpl()</code>​来实现。
+​<code>Dispatcher::registerDef()</code>​的功能为注册算子定义，其代码实现如下：
+</p>
+<div class="org-src-container">
+<pre class="src src-cpp"><span style="font-weight: bold; text-decoration: underline;">RegistrationHandleRAII</span> <span style="font-weight: bold; text-decoration: underline;">Dispatcher</span>::<span style="font-weight: bold;">registerDef</span>(<span style="font-weight: bold; text-decoration: underline;">FunctionSchema</span> <span style="font-weight: bold; font-style: italic;">schema</span>, <span style="font-weight: bold; text-decoration: underline;">std</span>::<span style="font-weight: bold; text-decoration: underline;">string</span> <span style="font-weight: bold; font-style: italic;">debug</span>, <span style="font-weight: bold; text-decoration: underline;">std</span>::<span style="font-weight: bold; text-decoration: underline;">vector</span>&lt;<span style="font-weight: bold; text-decoration: underline;">at</span>::Tag&gt; <span style="font-weight: bold; font-style: italic;">tags</span>) {
+  ...
+  OperatorName op_name = schema.operator_name();
+  <span style="font-weight: bold;">auto</span> <span style="font-weight: bold; font-style: italic;">op</span> = findOrRegisterName_(op_name);
+  ...
+}
+
+<span style="font-weight: bold; text-decoration: underline;">OperatorHandle</span> <span style="font-weight: bold; text-decoration: underline;">Dispatcher</span>::<span style="font-weight: bold;">findOrRegisterName_</span>(<span style="font-weight: bold;">const</span> <span style="font-weight: bold; text-decoration: underline;">OperatorName</span>&amp; <span style="font-weight: bold; font-style: italic;">op_name</span>) {
+  ...
+  operators_.emplace_back(OperatorName(op_name));
+  <span style="font-weight: bold; text-decoration: underline;">OperatorHandle</span> <span style="font-weight: bold; font-style: italic;">handle</span>(--operators_.end());
+  operatorLookupTable_.write([&amp;] (<span style="font-weight: bold; text-decoration: underline;">ska</span>::<span style="font-weight: bold; text-decoration: underline;">flat_hash_map</span>&lt;<span style="font-weight: bold; text-decoration: underline;">OperatorName</span>, <span style="font-weight: bold; text-decoration: underline;">OperatorHandle</span>&gt;&amp; <span style="font-weight: bold; font-style: italic;">operatorLookupTable</span>) {
+    operatorLookupTable.emplace(op_name, handle);
+  });
+  <span style="font-weight: bold;">return</span> handle;
+}
+</pre>
+</div>
+<p>
+可以看出，其主要功能为给在​<code>Dispatcher::operators_</code>​ list中新增一项OperatorDef, 同时还更新了算子查找表operatorLookupTable_.
+​<code>Dispatcyher::registerImpl()</code>​的功能为给算子注册KernelFunction实现，其代码实现如下：
+</p>
+<div class="org-src-container">
+<pre class="src src-cpp"><span style="font-weight: bold; text-decoration: underline;">RegistrationHandleRAII</span> <span style="font-weight: bold; text-decoration: underline;">Dispatcher</span>::<span style="font-weight: bold;">registerImpl</span>(
+  <span style="font-weight: bold; text-decoration: underline;">OperatorName</span> <span style="font-weight: bold; font-style: italic;">op_name</span>,
+  <span style="font-weight: bold; text-decoration: underline;">std</span>::<span style="font-weight: bold; text-decoration: underline;">optional</span>&lt;DispatchKey&gt; <span style="font-weight: bold; font-style: italic;">dispatch_key</span>,
+  <span style="font-weight: bold; text-decoration: underline;">KernelFunction</span> <span style="font-weight: bold; font-style: italic;">kernel</span>,
+  <span style="font-weight: bold; text-decoration: underline;">std</span>::<span style="font-weight: bold; text-decoration: underline;">optional</span>&lt;<span style="font-weight: bold; text-decoration: underline;">impl</span>::CppSignature&gt; <span style="font-weight: bold; font-style: italic;">cpp_signature</span>,
+  <span style="font-weight: bold; text-decoration: underline;">std</span>::<span style="font-weight: bold; text-decoration: underline;">unique_ptr</span>&lt;FunctionSchema&gt; <span style="font-weight: bold; font-style: italic;">inferred_function_schema</span>,
+  <span style="font-weight: bold; text-decoration: underline;">std</span>::<span style="font-weight: bold; text-decoration: underline;">string</span> <span style="font-weight: bold; font-style: italic;">debug</span>
+) {
+  ...
+  <span style="font-weight: bold;">auto</span> handle = op.operatorDef_-&gt;op.registerKernel(
+    *<span style="font-weight: bold;">this</span>,
+    dispatch_key,
+    <span style="font-weight: bold; text-decoration: underline;">std</span>::move(kernel),
+    <span style="font-weight: bold; text-decoration: underline;">std</span>::move(cpp_signature),
+    <span style="font-weight: bold; text-decoration: underline;">std</span>::move(inferred_function_schema),
+    <span style="font-weight: bold; text-decoration: underline;">std</span>::move(debug)
+  );
+  ...
+}
+</pre>
+</div>
+<p>
+可以看出，其主要通过调用OperatorEntry::registerKernel()来注册KernelFunction, 其实现如下：
+</p>
+<div class="org-src-container">
+<pre class="src src-cpp"><span style="font-weight: bold; text-decoration: underline;">OperatorEntry</span>::<span style="font-weight: bold; text-decoration: underline;">AnnotatedKernelContainerIterator</span> <span style="font-weight: bold; text-decoration: underline;">OperatorEntry</span>::<span style="font-weight: bold;">registerKernel</span>(
+  <span style="font-weight: bold;">const</span> <span style="font-weight: bold; text-decoration: underline;">c10</span>::<span style="font-weight: bold; text-decoration: underline;">Dispatcher</span>&amp; <span style="font-weight: bold; font-style: italic;">dispatcher</span>,
+  <span style="font-weight: bold; text-decoration: underline;">std</span>::<span style="font-weight: bold; text-decoration: underline;">optional</span>&lt;DispatchKey&gt; <span style="font-weight: bold; font-style: italic;">dispatch_key</span>,
+  <span style="font-weight: bold; text-decoration: underline;">KernelFunction</span> <span style="font-weight: bold; font-style: italic;">kernel</span>,
+  <span style="font-weight: bold; text-decoration: underline;">std</span>::<span style="font-weight: bold; text-decoration: underline;">optional</span>&lt;CppSignature&gt; <span style="font-weight: bold; font-style: italic;">cpp_signature</span>,
+  <span style="font-weight: bold; text-decoration: underline;">std</span>::<span style="font-weight: bold; text-decoration: underline;">unique_ptr</span>&lt;FunctionSchema&gt; <span style="font-weight: bold; font-style: italic;">inferred_function_schema</span>,
+  <span style="font-weight: bold; text-decoration: underline;">std</span>::<span style="font-weight: bold; text-decoration: underline;">string</span> <span style="font-weight: bold; font-style: italic;">debug</span>
+) {
+  ...
+  <span style="font-weight: bold;">auto</span>&amp; k = dispatch_key.has_value() ? kernels_[*dispatch_key] : kernels_[<span style="font-weight: bold; text-decoration: underline;">DispatchKey</span>::CompositeImplicitAutograd];
+<span style="font-weight: bold;">#ifdef</span> C10_DISPATCHER_ONE_KERNEL_PER_DISPATCH_KEY
+  k[0].kernel = <span style="font-weight: bold; text-decoration: underline;">std</span>::move(kernel);
+  k[0].inferred_function_schema = <span style="font-weight: bold; text-decoration: underline;">std</span>::move(inferred_function_schema);
+  k[0].debug = <span style="font-weight: bold; text-decoration: underline;">std</span>::move(debug);
+<span style="font-weight: bold;">#else</span>
+  k.emplace_front(<span style="font-weight: bold; text-decoration: underline;">std</span>::move(kernel), <span style="font-weight: bold; text-decoration: underline;">std</span>::move(inferred_function_schema), <span style="font-weight: bold; text-decoration: underline;">std</span>::move(debug));
+<span style="font-weight: bold;">#endif</span>
+  <span style="font-weight: bold; text-decoration: underline;">AnnotatedKernelContainerIterator</span> <span style="font-weight: bold; font-style: italic;">inserted</span> = k.begin();
+  <span style="font-weight: bold; font-style: italic;">// </span><span style="font-weight: bold; font-style: italic;">update the dispatch table, i.e. re-establish the invariant</span>
+  <span style="font-weight: bold; font-style: italic;">// </span><span style="font-weight: bold; font-style: italic;">that the dispatch table points to the newest kernel</span>
+  <span style="font-weight: bold;">if</span> (dispatch_key.has_value()) {
+    updateDispatchTable_(dispatcher, *dispatch_key);
+  } <span style="font-weight: bold;">else</span> {
+    updateDispatchTableFull_(dispatcher);
+  }
+  <span style="font-weight: bold;">return</span> inserted;
+}
+</pre>
+</div>
+<p>
+从中可以看出，其先在​<code>OperatorEntry::kernels_</code>​ map中DispatchKey的对应列表中插入一项AnnotatedKernel, 然后再调用​<code>OperatorEntry::updateDispatchTable_()</code>​来更新​<code>OperatorEntry::dispatchTable_</code>​, 如下：
+</p>
+<div class="org-src-container">
+<pre class="src src-cpp"><span style="font-weight: bold; text-decoration: underline;">void</span> <span style="font-weight: bold; text-decoration: underline;">OperatorEntry</span>::<span style="font-weight: bold;">updateDispatchTable_</span>(<span style="font-weight: bold;">const</span> <span style="font-weight: bold; text-decoration: underline;">c10</span>::<span style="font-weight: bold; text-decoration: underline;">Dispatcher</span>&amp; <span style="font-weight: bold; font-style: italic;">dispatcher</span>, <span style="font-weight: bold; text-decoration: underline;">DispatchKey</span> <span style="font-weight: bold; font-style: italic;">dispatch_key</span>) {
+  ...
+  <span style="font-weight: bold;">for</span> (<span style="font-weight: bold;">auto</span> <span style="font-weight: bold; font-style: italic;">k</span> : <span style="font-weight: bold; text-decoration: underline;">c10</span>::getRuntimeDispatchKeySet(dispatch_key)) {
+    updateDispatchTableEntry_(dispatcher, k);
+  }
+  ...
+}
+
+<span style="font-weight: bold; text-decoration: underline;">void</span> <span style="font-weight: bold; text-decoration: underline;">OperatorEntry</span>::<span style="font-weight: bold;">updateDispatchTableEntry_</span>(<span style="font-weight: bold;">const</span> <span style="font-weight: bold; text-decoration: underline;">c10</span>::<span style="font-weight: bold; text-decoration: underline;">Dispatcher</span>&amp; <span style="font-weight: bold; font-style: italic;">dispatcher</span>, <span style="font-weight: bold; text-decoration: underline;">DispatchKey</span> <span style="font-weight: bold; font-style: italic;">dispatch_key</span>) {
+  <span style="font-weight: bold;">const</span> <span style="font-weight: bold;">auto</span> <span style="font-weight: bold; font-style: italic;">dispatch_ix</span> = getDispatchTableIndexForDispatchKey(dispatch_key);
+  <span style="font-weight: bold;">if</span> (C10_UNLIKELY(dispatch_ix == -1)) {
+    <span style="font-weight: bold;">return</span>;
+  }
+  dispatchTable_[dispatch_ix] = computeDispatchTableEntry(dispatcher, dispatch_key);
+  dispatchKeyExtractor_.setOperatorHasFallthroughForKey(dispatch_key, dispatchTable_[dispatch_ix].isFallthrough());
+}
+</pre>
+</div>
+
+<p>
+综上所述，注册算子定义的主要工作为在​<code>Dispatcher::operators_</code>​ list中新增一项OperatorDef, 而注册算子KernelFunction实现的主要工作为给该OperatorDef的​<code>OperatorEntry::kernels_</code>​ map中相应value列表中插入一个AnnotatedKernel后再更新​<code>OperatorEntry::dispatchTable_</code>​。
+</p>
+</div>
+</div>
+</div>
+<div id="outline-container-org292202c" class="outline-3">
+<h3 id="org292202c"><span class="section-number-3">2.3.</span> 运行时链路</h3>
+<div class="outline-text-3" id="text-2-3">
+<p>
+PyTorch算子在执行时首先会根据算子名和schema等元数据（KernelFunction表行索引）在​<code>Dispatcher::dispatchTable_</code>​查找OperatorHandle, 然后再根据各处DispatchKey来计算DispatchKeySet以最终得到KernelFunction表列索引，最后使用该列索引在OperatorHandle对应的OperatorEntry中找到KernelFunction并调用之。
+需要注意的时，​<b>KernelFunction内的逻辑可能会重复上述流程以执行该算子的其它KernelFunction</b>​。
+例如，算子可能会先执行autograd相关逻辑，然后再执行算子对应的数学计算KernelFunction，而这些逻辑对应于多个不同的KernelFunction, 但它们都具有相同的执行流程。
+</p>
+
+<p>
+接下来本节将以Tensor.add()为例分析Dispatcher运行时链路，其调用栈整体如下图所示：
+</p>
+
+<div id="org4e0e80f" class="figure">
+<p><img src="https://github.com/azjf/azjf.github.io/raw/main/img/71/9C0C82-8BA6-4173-8061-471AA0969F96/2025-07-06_21-46-21_screenshot.png" alt="2025-07-06_21-46-21_screenshot.png" />
+</p>
+</div>
+
+<p>
+当使用PyTorch Python前端执行​<code>tensor1 + tensor2</code>​后，经过pybind后将调用到C++侧THPVariable<sub>add</sub>(), 如下：
+</p>
+<div class="org-src-container">
+<pre class="src src-cpp"><span style="font-weight: bold;">static</span> <span style="font-weight: bold; text-decoration: underline;">PyObject</span> * <span style="font-weight: bold;">THPVariable_add</span>(<span style="font-weight: bold; text-decoration: underline;">PyObject</span>* <span style="font-weight: bold; font-style: italic;">self_</span>, <span style="font-weight: bold; text-decoration: underline;">PyObject</span>* <span style="font-weight: bold; font-style: italic;">args</span>, <span style="font-weight: bold; text-decoration: underline;">PyObject</span>* <span style="font-weight: bold; font-style: italic;">kwargs</span>)
+{
+  ...
+  <span style="font-weight: bold;">auto</span> dispatch_add = [](<span style="font-weight: bold;">const</span> <span style="font-weight: bold; text-decoration: underline;">at</span>::<span style="font-weight: bold; text-decoration: underline;">Tensor</span> &amp; <span style="font-weight: bold; font-style: italic;">self</span>, <span style="font-weight: bold;">const</span> <span style="font-weight: bold; text-decoration: underline;">at</span>::<span style="font-weight: bold; text-decoration: underline;">Tensor</span> &amp; <span style="font-weight: bold; font-style: italic;">other</span>, <span style="font-weight: bold;">const</span> <span style="font-weight: bold; text-decoration: underline;">at</span>::<span style="font-weight: bold; text-decoration: underline;">Scalar</span> &amp; <span style="font-weight: bold; font-style: italic;">alpha</span>) -&gt; <span style="font-weight: bold; text-decoration: underline;">at</span>::Tensor {
+    <span style="font-weight: bold; text-decoration: underline;">pybind11</span>::<span style="font-weight: bold; text-decoration: underline;">gil_scoped_release</span> <span style="font-weight: bold; font-style: italic;">no_gil</span>;
+    <span style="font-weight: bold;">return</span> self.add(other, alpha);
+  };
+  ...
+}
+</pre>
+</div>
+<p>
+之后将执行at::Tensor::add(), 如下：
+</p>
+<div class="org-src-container">
+<pre class="src src-cpp"><span style="font-weight: bold;">inline</span> <span style="font-weight: bold; text-decoration: underline;">at</span>::<span style="font-weight: bold; text-decoration: underline;">Tensor</span> <span style="font-weight: bold; text-decoration: underline;">Tensor</span>::<span style="font-weight: bold;">add</span>(<span style="font-weight: bold;">const</span> <span style="font-weight: bold; text-decoration: underline;">at</span>::<span style="font-weight: bold; text-decoration: underline;">Tensor</span> &amp; <span style="font-weight: bold; font-style: italic;">other</span>, <span style="font-weight: bold;">const</span> <span style="font-weight: bold; text-decoration: underline;">at</span>::<span style="font-weight: bold; text-decoration: underline;">Scalar</span> &amp; <span style="font-weight: bold; font-style: italic;">alpha</span>) <span style="font-weight: bold;">const</span> {
+    <span style="font-weight: bold;">return</span> <span style="font-weight: bold; text-decoration: underline;">at</span>::<span style="font-weight: bold; text-decoration: underline;">_ops</span>::<span style="font-weight: bold; text-decoration: underline;">add_Tensor</span>::call(<span style="font-weight: bold;">const_cast</span>&lt;<span style="font-weight: bold; text-decoration: underline;">Tensor</span>&amp;&gt;(*<span style="font-weight: bold;">this</span>), other, alpha);
+}
+
+<span style="font-weight: bold; text-decoration: underline;">at</span>::<span style="font-weight: bold; text-decoration: underline;">Tensor</span> <span style="font-weight: bold; text-decoration: underline;">add_Tensor</span>::<span style="font-weight: bold;">call</span>(<span style="font-weight: bold;">const</span> <span style="font-weight: bold; text-decoration: underline;">at</span>::<span style="font-weight: bold; text-decoration: underline;">Tensor</span> &amp; <span style="font-weight: bold; font-style: italic;">self</span>, <span style="font-weight: bold;">const</span> <span style="font-weight: bold; text-decoration: underline;">at</span>::<span style="font-weight: bold; text-decoration: underline;">Tensor</span> &amp; <span style="font-weight: bold; font-style: italic;">other</span>, <span style="font-weight: bold;">const</span> <span style="font-weight: bold; text-decoration: underline;">at</span>::<span style="font-weight: bold; text-decoration: underline;">Scalar</span> &amp; <span style="font-weight: bold; font-style: italic;">alpha</span>) {
+    <span style="font-weight: bold;">static</span> <span style="font-weight: bold;">auto</span> <span style="font-weight: bold; font-style: italic;">op</span> = create_add_Tensor_typed_handle();
+    <span style="font-weight: bold;">return</span> op.call(self, other, alpha);
+}
+</pre>
+</div>
+<p>
+at::Tensor::add()之间透穿调用到add<sub>Tensor</sub>::call(), 其会先查找add算子对应的OperatorHandle, 然后再执行查找结果call()方法。
+</p>
+</div>
+<div id="outline-container-org3595751" class="outline-4">
+<h4 id="org3595751"><span class="section-number-4">2.3.1.</span> 查找OperatorHandle</h4>
+<div class="outline-text-4" id="text-2-3-1">
+<p>
+create<sub>add</sub><sub>Tensor</sub><sub>typed</sub><sub>handle</sub>()的实现如下：
+</p>
+<div class="org-src-container">
+<pre class="src src-cpp"><span style="font-weight: bold;">static</span> C10_NOINLINE <span style="font-weight: bold; text-decoration: underline;">c10</span>::<span style="font-weight: bold; text-decoration: underline;">TypedOperatorHandle</span>&lt;<span style="font-weight: bold; text-decoration: underline;">add_Tensor</span>::schema&gt; <span style="font-weight: bold;">create_add_Tensor_typed_handle</span>() {
+  <span style="font-weight: bold;">return</span> <span style="font-weight: bold; text-decoration: underline;">c10</span>::<span style="font-weight: bold; text-decoration: underline;">Dispatcher</span>::singleton()
+      .findSchemaOrThrow(<span style="font-weight: bold; text-decoration: underline;">add_Tensor</span>::name, <span style="font-weight: bold; text-decoration: underline;">add_Tensor</span>::overload_name)
+      .typed&lt;<span style="font-weight: bold; text-decoration: underline;">add_Tensor</span>::schema&gt;();
+}
+</pre>
+</div>
+<p>
+可以看出，其本质上调用Dispatcher::findSchemaOrThrow()来完成任务，如下：
+</p>
+<div class="org-src-container">
+<pre class="src src-cpp"><span style="font-weight: bold; text-decoration: underline;">OperatorHandle</span> <span style="font-weight: bold; text-decoration: underline;">Dispatcher</span>::<span style="font-weight: bold;">findSchemaOrThrow</span>(<span style="font-weight: bold;">const</span> <span style="font-weight: bold; text-decoration: underline;">char</span>* <span style="font-weight: bold; font-style: italic;">name</span>, <span style="font-weight: bold;">const</span> <span style="font-weight: bold; text-decoration: underline;">char</span>* <span style="font-weight: bold; font-style: italic;">overload_name</span>) {
+  <span style="font-weight: bold;">auto</span> <span style="font-weight: bold; font-style: italic;">it</span> = findSchema({name, overload_name});
+  ...
+  <span style="font-weight: bold;">return</span> it.value();
+}
+
+<span style="font-weight: bold; text-decoration: underline;">std</span>::<span style="font-weight: bold; text-decoration: underline;">optional</span>&lt;<span style="font-weight: bold; text-decoration: underline;">OperatorHandle</span>&gt; <span style="font-weight: bold; text-decoration: underline;">Dispatcher</span>::<span style="font-weight: bold;">findSchema</span>(<span style="font-weight: bold;">const</span> <span style="font-weight: bold; text-decoration: underline;">OperatorName</span>&amp; <span style="font-weight: bold; font-style: italic;">overload_name</span>) {
+  <span style="font-weight: bold;">auto</span> <span style="font-weight: bold; font-style: italic;">it</span> = findOp(overload_name);
+  ..
+}
+</pre>
+</div>
+<p>
+可以看出，findSchemaOrThrow()最终将调用到findOp(), 如下：
+</p>
+<div class="org-src-container">
+<pre class="src src-cpp"><span style="font-weight: bold; text-decoration: underline;">std</span>::<span style="font-weight: bold; text-decoration: underline;">optional</span>&lt;OperatorHandle&gt; <span style="font-weight: bold; text-decoration: underline;">Dispatcher</span>::<span style="font-weight: bold;">findOp</span>(<span style="font-weight: bold;">const</span> <span style="font-weight: bold; text-decoration: underline;">OperatorName</span>&amp; <span style="font-weight: bold; font-style: italic;">overload_name</span>) {
+  <span style="font-weight: bold;">return</span> operatorLookupTable_.read([&amp;] (<span style="font-weight: bold;">const</span> <span style="font-weight: bold; text-decoration: underline;">ska</span>::<span style="font-weight: bold; text-decoration: underline;">flat_hash_map</span>&lt;<span style="font-weight: bold; text-decoration: underline;">OperatorName</span>, OperatorHandle&gt;&amp; <span style="font-weight: bold; font-style: italic;">operatorLookupTable</span>) -&gt; <span style="font-weight: bold; text-decoration: underline;">std</span>::<span style="font-weight: bold; text-decoration: underline;">optional</span>&lt;OperatorHandle&gt; {
+    <span style="font-weight: bold;">auto</span> <span style="font-weight: bold; font-style: italic;">found</span> = operatorLookupTable.find(overload_name);
+    <span style="font-weight: bold;">if</span> (found == operatorLookupTable.end()) {
+      <span style="font-weight: bold;">return</span> <span style="font-weight: bold; text-decoration: underline;">std</span>::nullopt;
+    }
+    <span style="font-weight: bold;">return</span> found-&gt;second;
+  });
+}
+</pre>
+</div>
+<p>
+findOp()本质上是在根据OperatorName来查前述Dispatcher::operatorLookupTable_ map.
+对于add算子，最终查找结果为OperatorHandle的子类TypedOperatorHandle.
+</p>
+</div>
+</div>
+<div id="outline-container-org665b4f2" class="outline-4">
+<h4 id="org665b4f2"><span class="section-number-4">2.3.2.</span> 执行OperatorHandle</h4>
+<div class="outline-text-4" id="text-2-3-2">
+<p>
+add<sub>Tensor</sub>::call()在查找到OperatorHandle后，会执行TypedOperatorHandle::call()方法，如下：
+</p>
+<div class="org-src-container">
+<pre class="src src-cpp"><span style="font-weight: bold;">template</span> &lt;<span style="font-weight: bold;">class</span> <span style="font-weight: bold; text-decoration: underline;">Return</span>, <span style="font-weight: bold;">class</span>... <span style="font-weight: bold; text-decoration: underline;">Args</span>&gt;
+<span style="font-weight: bold;">class</span> <span style="font-weight: bold; text-decoration: underline;">TypedOperatorHandle</span>&lt;Return(<span style="font-weight: bold; text-decoration: underline;">Args</span>...)&gt; <span style="font-weight: bold;">final</span> : <span style="font-weight: bold;">public</span> OperatorHandle {
+ <span style="font-weight: bold;">public</span>:
+  C10_ALWAYS_INLINE <span style="font-weight: bold; text-decoration: underline;">Return</span> <span style="font-weight: bold;">call</span>(<span style="font-weight: bold; text-decoration: underline;">Args</span>... <span style="font-weight: bold; font-style: italic;">args</span>) <span style="font-weight: bold;">const</span> {
+    <span style="font-weight: bold;">return</span> <span style="font-weight: bold; text-decoration: underline;">c10</span>::<span style="font-weight: bold; text-decoration: underline;">Dispatcher</span>::singleton().call&lt;<span style="font-weight: bold; text-decoration: underline;">Return</span>, <span style="font-weight: bold; text-decoration: underline;">Args</span>...&gt;(
+        ,*<span style="font-weight: bold;">this</span>, <span style="font-weight: bold; text-decoration: underline;">std</span>::forward&lt;<span style="font-weight: bold; text-decoration: underline;">Args</span>&gt;(args)...);
+  }
+};
+</pre>
+</div>
+<p>
+可以看出，其通过调用Dispatcher::call()来完成任务，如下：
+</p>
+<div class="org-src-container">
+<pre class="src src-cpp"><span style="font-weight: bold;">template</span> &lt;<span style="font-weight: bold;">class</span> <span style="font-weight: bold; text-decoration: underline;">Return</span>, <span style="font-weight: bold;">class</span>... <span style="font-weight: bold; text-decoration: underline;">Args</span>&gt;
+C10_ALWAYS_INLINE_UNLESS_MOBILE <span style="font-weight: bold; text-decoration: underline;">Return</span> <span style="font-weight: bold; text-decoration: underline;">Dispatcher</span>::<span style="font-weight: bold;">call</span>(
+    <span style="font-weight: bold;">const</span> <span style="font-weight: bold; text-decoration: underline;">TypedOperatorHandle</span>&lt;Return(<span style="font-weight: bold; text-decoration: underline;">Args</span>...)&gt;&amp; <span style="font-weight: bold; font-style: italic;">op</span>,
+    <span style="font-weight: bold; text-decoration: underline;">Args</span>... <span style="font-weight: bold; font-style: italic;">args</span>) <span style="font-weight: bold;">const</span> {
+  <span style="font-weight: bold;">auto</span> <span style="font-weight: bold; font-style: italic;">dispatchKeySet</span> =
+      op.operatorDef_-&gt;op.dispatchKeyExtractor()
+          .<span style="font-weight: bold;">template</span> getDispatchKeySetUnboxed&lt;<span style="font-weight: bold; text-decoration: underline;">Args</span>...&gt;(args...);
+  ...
+  <span style="font-weight: bold;">const</span> KernelFunction&amp; kernel = op.operatorDef_-&gt;op.lookup(dispatchKeySet);
+  ...
+  <span style="font-weight: bold;">return</span> kernel.<span style="font-weight: bold;">template</span> call&lt;<span style="font-weight: bold; text-decoration: underline;">Return</span>, <span style="font-weight: bold; text-decoration: underline;">Args</span>...&gt;(op, dispatchKeySet, <span style="font-weight: bold; text-decoration: underline;">std</span>::forward&lt;<span style="font-weight: bold; text-decoration: underline;">Args</span>&gt;(args)...);
+}
+</pre>
+</div>
+<p>
+call()首先会计算DispatchKeySet, 然后再根据DispatchKeySet计算出KernelFunction表列索引，之后再根据列索引从OperatorEntry中查找出KernelFunction, 最后再执行之。
+</p>
+
+<p>
+除了Dispatcher::call()外，Dispatcher还有redispatch(), 其本质上和call()相同，只是其从入参获取DispatchKeySet, 而不是根据入参等来计算之，如下：
+</p>
+<div class="org-src-container">
+<pre class="src src-cpp"><span style="font-weight: bold;">template</span> &lt;<span style="font-weight: bold;">class</span> <span style="font-weight: bold; text-decoration: underline;">Return</span>, <span style="font-weight: bold;">class</span>... <span style="font-weight: bold; text-decoration: underline;">Args</span>&gt;
+<span style="font-weight: bold;">inline</span> <span style="font-weight: bold; text-decoration: underline;">Return</span> <span style="font-weight: bold; text-decoration: underline;">Dispatcher</span>::<span style="font-weight: bold;">redispatch</span>(
+    <span style="font-weight: bold;">const</span> <span style="font-weight: bold; text-decoration: underline;">TypedOperatorHandle</span>&lt;Return(<span style="font-weight: bold; text-decoration: underline;">Args</span>...)&gt;&amp; <span style="font-weight: bold; font-style: italic;">op</span>,
+    <span style="font-weight: bold; text-decoration: underline;">DispatchKeySet</span> <span style="font-weight: bold; font-style: italic;">currentDispatchKeySet</span>,
+    <span style="font-weight: bold; text-decoration: underline;">Args</span>... <span style="font-weight: bold; font-style: italic;">args</span>) <span style="font-weight: bold;">const</span> {
+  ...
+  <span style="font-weight: bold;">const</span> KernelFunction&amp; kernel =
+      op.operatorDef_-&gt;op.lookup(currentDispatchKeySet);
+  <span style="font-weight: bold;">return</span> kernel.<span style="font-weight: bold;">template</span> call&lt;<span style="font-weight: bold; text-decoration: underline;">Return</span>, <span style="font-weight: bold; text-decoration: underline;">Args</span>...&gt;(
+      op, currentDispatchKeySet, <span style="font-weight: bold; text-decoration: underline;">std</span>::forward&lt;<span style="font-weight: bold; text-decoration: underline;">Args</span>&gt;(args)...);
+}
+</pre>
+</div>
+</div>
+</div>
+<div id="outline-container-orga74a529" class="outline-4">
+<h4 id="orga74a529"><span class="section-number-4">2.3.3.</span> 计算DispatchKeySet</h4>
+<div class="outline-text-4" id="text-2-3-3">
+<p>
+Dispatcher::call()会使用OperatorEntry::dispatchKeyExtractor<sub>来根据入参tensor</sub>/thread local变量/DispatchKeyExtractor中的算子自定义逻辑来综合计算出DispatchKeySet (实现来multiple-dispatch)，如下：
+</p>
+<div class="org-src-container">
+<pre class="src src-cpp"><span style="font-weight: bold;">template</span> &lt;<span style="font-weight: bold;">class</span>... <span style="font-weight: bold; text-decoration: underline;">Args</span>&gt;
+<span style="font-weight: bold; text-decoration: underline;">DispatchKeySet</span> <span style="font-weight: bold; text-decoration: underline;">DispatchKeyExtractor</span>::<span style="font-weight: bold;">getDispatchKeySetUnboxed</span>() <span style="font-weight: bold;">const</span> {
+  <span style="font-weight: bold;">auto</span> <span style="font-weight: bold; font-style: italic;">ks</span> = <span style="font-weight: bold; text-decoration: underline;">detail</span>::multi_dispatch_key_set(args...);
+  <span style="font-weight: bold; font-style: italic;">// </span><span style="font-weight: bold; font-style: italic;">Keys that are fallthrough should be skipped</span>
+  <span style="font-weight: bold;">if</span> (requiresBitsetPerBackend_) {
+    <span style="font-weight: bold; text-decoration: underline;">c10</span>::<span style="font-weight: bold; text-decoration: underline;">impl</span>::<span style="font-weight: bold; text-decoration: underline;">LocalDispatchKeySet</span> <span style="font-weight: bold; font-style: italic;">tls</span> =
+        <span style="font-weight: bold; text-decoration: underline;">c10</span>::<span style="font-weight: bold; text-decoration: underline;">impl</span>::tls_local_dispatch_key_set();
+    <span style="font-weight: bold;">auto</span> <span style="font-weight: bold; font-style: italic;">backend_idx</span> =
+        ((ks | tls.included_) - tls.excluded_).getBackendIndex();
+    <span style="font-weight: bold;">return</span> <span style="font-weight: bold; text-decoration: underline;">impl</span>::computeDispatchKeySet(
+        ks, nonFallthroughKeysPerBackend_[backend_idx]);
+  } <span style="font-weight: bold;">else</span> {
+    <span style="font-weight: bold;">return</span> <span style="font-weight: bold; text-decoration: underline;">impl</span>::computeDispatchKeySet(ks, nonFallthroughKeys_);
+  }
+}
+</pre>
+</div>
+<p>
+可以看出，getDispatchKeySetUnboxed()首先会利用detail::multi<sub>dispatch</sub><sub>key</sub><sub>set</sub>(args&#x2026;)来从融合入参中的DispatchKey, 然后融合LocalDispatchKeySet, 最后再融合DispatchKeyExtractor的算子自定义nonFallthroughKeys_.
+multi<sub>dispatch</sub><sub>key</sub><sub>set</sub>()的计算逻辑如下：
+</p>
+<div class="org-src-container">
+<pre class="src src-cpp"><span style="font-weight: bold;">template</span> &lt;<span style="font-weight: bold;">typename</span>... <span style="font-weight: bold; text-decoration: underline;">Args</span>&gt;
+<span style="font-weight: bold; text-decoration: underline;">DispatchKeySet</span> <span style="font-weight: bold;">multi_dispatch_key_set</span>(<span style="font-weight: bold;">const</span> <span style="font-weight: bold; text-decoration: underline;">Args</span>&amp;... <span style="font-weight: bold; font-style: italic;">args</span>) {
+  <span style="font-weight: bold;">return</span> MultiDispatchKeySet().apply(args...).ts;
+}
+
+<span style="font-weight: bold;">struct</span> <span style="font-weight: bold; text-decoration: underline;">MultiDispatchKeySet</span> : <span style="font-weight: bold; text-decoration: underline;">at</span>::<span style="font-weight: bold; text-decoration: underline;">IterArgs</span>&lt;<span style="font-weight: bold; text-decoration: underline;">MultiDispatchKeySet</span>&gt; {
+  <span style="font-weight: bold; text-decoration: underline;">DispatchKeySet</span> <span style="font-weight: bold; font-style: italic;">ts</span>;
+  <span style="font-weight: bold; text-decoration: underline;">void</span> <span style="font-weight: bold;">operator</span><span style="font-weight: bold;">()</span>(<span style="font-weight: bold;">const</span> <span style="font-weight: bold; text-decoration: underline;">at</span>::<span style="font-weight: bold; text-decoration: underline;">Tensor</span>&amp; <span style="font-weight: bold; font-style: italic;">x</span>) {
+    ts = ts | x.key_set();
+  }
+};
+
+<span style="font-weight: bold;">struct</span> <span style="font-weight: bold; text-decoration: underline;">C10_API</span> <span style="font-weight: bold; text-decoration: underline;">TensorImpl</span> : <span style="font-weight: bold;">public</span> <span style="font-weight: bold; text-decoration: underline;">c10</span>::<span style="font-weight: bold; text-decoration: underline;">intrusive_ptr_target</span> {
+ <span style="font-weight: bold;">private</span>:
+  <span style="font-weight: bold; text-decoration: underline;">DispatchKeySet</span> <span style="font-weight: bold; font-style: italic;">key_set_</span>;
+};
+</pre>
+</div>
+<p>
+可以看出，multi<sub>dispatch</sub><sub>key</sub><sub>set</sub>()本质上为对所有入参tensor对象的key<sub>set</sub><sub>做位或运算</sub>。
+computeDispatchKeySet()的计算逻辑如下：
+</p>
+<div class="org-src-container">
+<pre class="src src-cpp"><span style="font-weight: bold;">inline</span> <span style="font-weight: bold; text-decoration: underline;">DispatchKeySet</span> <span style="font-weight: bold;">computeDispatchKeySet</span>(
+    <span style="font-weight: bold; text-decoration: underline;">DispatchKeySet</span> <span style="font-weight: bold; font-style: italic;">ks</span>,
+    <span style="font-weight: bold; text-decoration: underline;">DispatchKeySet</span> <span style="font-weight: bold; font-style: italic;">key_mask</span>) {
+  <span style="font-weight: bold; text-decoration: underline;">c10</span>::<span style="font-weight: bold; text-decoration: underline;">impl</span>::<span style="font-weight: bold; text-decoration: underline;">LocalDispatchKeySet</span> <span style="font-weight: bold; font-style: italic;">local</span> =
+      <span style="font-weight: bold; text-decoration: underline;">c10</span>::<span style="font-weight: bold; text-decoration: underline;">impl</span>::tls_local_dispatch_key_set();
+  <span style="font-weight: bold;">return</span> (((ks | local.included_) - local.excluded_) &amp; key_mask);
+}
+</pre>
+</div>
+
+<p>
+除了​<code>DispatchKeyExtractor::getDispatchKeySetUnboxed()</code>​外，DispatchKeyExtractor还有getDispatchKeySetBoxed(), 其本质上和getDispatchKeySetUnboxed()相同，只是其是从JIT stack中获取入参tensor，如下：
+</p>
+<div class="org-src-container">
+<pre class="src src-cpp"><span style="font-weight: bold; text-decoration: underline;">DispatchKeySet</span> <span style="font-weight: bold; text-decoration: underline;">DispatchKeyExtractor</span>::<span style="font-weight: bold;">getDispatchKeySetBoxed</span>(<span style="font-weight: bold;">const</span> <span style="font-weight: bold; text-decoration: underline;">torch</span>::<span style="font-weight: bold; text-decoration: underline;">jit</span>::<span style="font-weight: bold; text-decoration: underline;">Stack</span>* <span style="font-weight: bold; font-style: italic;">stack</span>) <span style="font-weight: bold;">const</span> {
+  <span style="font-weight: bold; text-decoration: underline;">DispatchKeySet</span> <span style="font-weight: bold; font-style: italic;">ks</span>;
+  dispatch_arg_indices_reverse_.for_each_set_bit([&amp;](<span style="font-weight: bold; text-decoration: underline;">size_t</span>
+                                                         <span style="font-weight: bold; font-style: italic;">reverse_arg_index</span>) {
+    <span style="font-weight: bold;">const</span> <span style="font-weight: bold;">auto</span>&amp; <span style="font-weight: bold; font-style: italic;">ivalue</span> = <span style="font-weight: bold; text-decoration: underline;">torch</span>::<span style="font-weight: bold; text-decoration: underline;">jit</span>::peek(*stack, 0, reverse_arg_index + 1);
+    ...
+}
+</pre>
+</div>
+</div>
+</div>
+<div id="outline-container-orga6943d6" class="outline-4">
+<h4 id="orga6943d6"><span class="section-number-4">2.3.4.</span> 查找KernelFunction</h4>
+<div class="outline-text-4" id="text-2-3-4">
+<p>
+在得到DispatchKeySet后，​<code>OperatorEntry::lookup()</code>​先通过​<code>DispatchKeySet::getDispatchTableIndexForDispatchKeySet()</code>​来计算出其对应的KernelFunction表列索引，然后再直接查dispatchTable<sub>数组以获得KernelFunction</sub>, 如下：
+</p>
+<div class="org-src-container">
+<pre class="src src-cpp"><span style="font-weight: bold;">const</span> <span style="font-weight: bold; text-decoration: underline;">KernelFunction</span>&amp; <span style="font-weight: bold; text-decoration: underline;">OperatorEntry</span>::<span style="font-weight: bold;">lookup</span>(<span style="font-weight: bold; text-decoration: underline;">DispatchKeySet</span> <span style="font-weight: bold; font-style: italic;">ks</span>) <span style="font-weight: bold;">const</span> {
+  <span style="font-weight: bold;">const</span> <span style="font-weight: bold;">auto</span> <span style="font-weight: bold; font-style: italic;">idx</span> = ks.getDispatchTableIndexForDispatchKeySet();
+  <span style="font-weight: bold;">if</span> (C10_UNLIKELY(idx == -1)) {
+    reportError(ks.highestPriorityTypeId());
+  }
+  <span style="font-weight: bold;">const</span> <span style="font-weight: bold;">auto</span>&amp; <span style="font-weight: bold; font-style: italic;">kernel</span> = dispatchTable_[idx];
+  ...
+  <span style="font-weight: bold;">return</span> kernel;
+}
+</pre>
+</div>
+</div>
+</div>
+<div id="outline-container-orgd5e90f4" class="outline-4">
+<h4 id="orgd5e90f4"><span class="section-number-4">2.3.5.</span> 调用KernelFunction</h4>
+<div class="outline-text-4" id="text-2-3-5">
+<p>
+在得到KernelFunction后，Dispatcher将执行KernelFunction::call(), 其逻辑如下：
+</p>
+<div class="org-src-container">
+<pre class="src src-cpp"><span style="font-weight: bold;">template</span> &lt;<span style="font-weight: bold;">class</span> <span style="font-weight: bold; text-decoration: underline;">Return</span>, <span style="font-weight: bold;">class</span>... <span style="font-weight: bold; text-decoration: underline;">Args</span>&gt;
+C10_ALWAYS_INLINE <span style="font-weight: bold; text-decoration: underline;">Return</span> <span style="font-weight: bold; text-decoration: underline;">KernelFunction</span>::<span style="font-weight: bold;">call</span>(
+  <span style="font-weight: bold;">const</span> <span style="font-weight: bold; text-decoration: underline;">OperatorHandle</span>&amp; <span style="font-weight: bold; font-style: italic;">opHandle</span>,
+  <span style="font-weight: bold; text-decoration: underline;">DispatchKeySet</span> <span style="font-weight: bold; font-style: italic;">dispatchKeySet</span>,
+  <span style="font-weight: bold; text-decoration: underline;">Args</span>... <span style="font-weight: bold; font-style: italic;">args</span>) <span style="font-weight: bold;">const</span> {
+  ...
+  <span style="font-weight: bold;">auto</span>* functor = boxed_kernel_func_.getFunctor();
+  <span style="font-weight: bold;">return</span> callUnboxedKernelFunction&lt;<span style="font-weight: bold; text-decoration: underline;">Return</span>, <span style="font-weight: bold; text-decoration: underline;">Args</span>...&gt;(
+      unboxed_kernel_func_,
+      functor,
+      dispatchKeySet,
+      <span style="font-weight: bold; text-decoration: underline;">std</span>::forward&lt;<span style="font-weight: bold; text-decoration: underline;">Args</span>&gt;(args)...);
+  ...
+}
+</pre>
+</div>
+<p>
+可以看出，其将通过调用callUnboxedKernelFunction()来完成任务，如下：
+</p>
+<div class="org-src-container">
+<pre class="src src-cpp"><span style="font-weight: bold;">template</span> &lt;<span style="font-weight: bold;">class</span> <span style="font-weight: bold; text-decoration: underline;">Return</span>, <span style="font-weight: bold;">class</span>... <span style="font-weight: bold; text-decoration: underline;">Args</span>&gt;
+<span style="font-weight: bold;">inline</span> <span style="font-weight: bold; text-decoration: underline;">Return</span> <span style="font-weight: bold;">callUnboxedKernelFunction</span>(
+    <span style="font-weight: bold; text-decoration: underline;">void</span>* <span style="font-weight: bold; font-style: italic;">unboxed_kernel_func</span>,
+    <span style="font-weight: bold; text-decoration: underline;">OperatorKernel</span>* <span style="font-weight: bold; font-style: italic;">functor</span>,
+    <span style="font-weight: bold; text-decoration: underline;">DispatchKeySet</span> <span style="font-weight: bold; font-style: italic;">dispatchKeySet</span>,
+    <span style="font-weight: bold; text-decoration: underline;">Args</span>&amp;&amp;... <span style="font-weight: bold; font-style: italic;">args</span>) {
+  <span style="font-weight: bold;">using</span> <span style="font-weight: bold; text-decoration: underline;">ActualSignature</span> = Return(<span style="font-weight: bold; text-decoration: underline;">OperatorKernel</span>*, DispatchKeySet, Args...);
+  <span style="font-weight: bold; text-decoration: underline;">ActualSignature</span>* <span style="font-weight: bold; font-style: italic;">func</span> =
+      <span style="font-weight: bold;">reinterpret_cast</span>&lt;<span style="font-weight: bold; text-decoration: underline;">ActualSignature</span>*&gt;(unboxed_kernel_func);
+  <span style="font-weight: bold;">return</span> (*func)(functor, dispatchKeySet, <span style="font-weight: bold; text-decoration: underline;">std</span>::forward&lt;<span style="font-weight: bold; text-decoration: underline;">Args</span>&gt;(args)...);
+}
+
+<span style="font-weight: bold;">template</span> &lt;<span style="font-weight: bold;">class</span> <span style="font-weight: bold; text-decoration: underline;">KernelFunctor</span>, <span style="font-weight: bold;">class</span> <span style="font-weight: bold; text-decoration: underline;">ReturnType</span>, <span style="font-weight: bold;">class</span>... <span style="font-weight: bold; text-decoration: underline;">ParameterTypes</span>&gt;
+<span style="font-weight: bold;">struct</span> <span style="font-weight: bold; text-decoration: underline;">wrap_kernel_functor_unboxed_</span>&lt;
+    <span style="font-weight: bold; text-decoration: underline;">KernelFunctor</span>,
+    ReturnType(<span style="font-weight: bold; text-decoration: underline;">DispatchKeySet</span>, <span style="font-weight: bold; text-decoration: underline;">ParameterTypes</span>...)&gt;
+    <span style="font-weight: bold;">final</span> {
+  <span style="font-weight: bold;">static</span> <span style="font-weight: bold; text-decoration: underline;">ReturnType</span> <span style="font-weight: bold;">call</span>(
+      <span style="font-weight: bold; text-decoration: underline;">OperatorKernel</span>* <span style="font-weight: bold; font-style: italic;">functor</span>,
+      <span style="font-weight: bold; text-decoration: underline;">DispatchKeySet</span> <span style="font-weight: bold; font-style: italic;">dispatchKeySet</span>,
+      <span style="font-weight: bold; text-decoration: underline;">ParameterTypes</span>... <span style="font-weight: bold; font-style: italic;">args</span>) {
+    <span style="font-weight: bold; text-decoration: underline;">KernelFunctor</span>* <span style="font-weight: bold; font-style: italic;">functor_</span> = <span style="font-weight: bold;">static_cast</span>&lt;<span style="font-weight: bold; text-decoration: underline;">KernelFunctor</span>*&gt;(functor);
+    <span style="font-weight: bold;">return</span> (*functor_)(dispatchKeySet, <span style="font-weight: bold; text-decoration: underline;">std</span>::forward&lt;<span style="font-weight: bold; text-decoration: underline;">ParameterTypes</span>&gt;(args)...);
+  }
+};
+
+<span style="font-weight: bold;">template</span> &lt;<span style="font-weight: bold;">class</span> <span style="font-weight: bold; text-decoration: underline;">FuncPtr</span>, <span style="font-weight: bold;">class</span> <span style="font-weight: bold; text-decoration: underline;">ReturnType</span>, <span style="font-weight: bold;">class</span>... <span style="font-weight: bold; text-decoration: underline;">Parameters</span>&gt;
+<span style="font-weight: bold;">class</span> <span style="font-weight: bold; text-decoration: underline;">WrapFunctionIntoFunctor_</span>&lt;
+    <span style="font-weight: bold; text-decoration: underline;">FuncPtr</span>,
+    <span style="font-weight: bold; text-decoration: underline;">ReturnType</span>,
+    <span style="font-weight: bold; text-decoration: underline;">guts</span>::<span style="font-weight: bold; text-decoration: underline;">typelist</span>::<span style="font-weight: bold; text-decoration: underline;">typelist</span>&lt;<span style="font-weight: bold; text-decoration: underline;">Parameters</span>...&gt;&gt;
+    <span style="font-weight: bold;">final</span> : <span style="font-weight: bold;">public</span> <span style="font-weight: bold; text-decoration: underline;">c10</span>::OperatorKernel {
+ <span style="font-weight: bold;">public</span>:
+  C10_ALWAYS_INLINE <span style="font-weight: bold;">decltype</span>(<span style="font-weight: bold;">auto</span>) <span style="font-weight: bold;">operator</span><span style="font-weight: bold;">()</span>(<span style="font-weight: bold; text-decoration: underline;">Parameters</span>... <span style="font-weight: bold; font-style: italic;">args</span>) {
+    <span style="font-weight: bold;">return</span> (*<span style="font-weight: bold; text-decoration: underline;">FuncPtr</span>::func_ptr())(<span style="font-weight: bold; text-decoration: underline;">std</span>::forward&lt;<span style="font-weight: bold; text-decoration: underline;">Parameters</span>&gt;(args)...);
+  }
+};
+</pre>
+</div>
+<p>
+可以看出，callUnboxedKernelFunction()在调用到KerneFunction的最终目标前经过来多次完美转发。
+对于​<code>tensor1 + tensor2</code>​, add算子第一次执行的KernelFunction最终将执行​<code>torch::autograd::unamed::VariableType::add_Tensor()</code>​.
+</p>
+</div>
+</div>
+<div id="outline-container-orge635d9b" class="outline-4">
+<h4 id="orge635d9b"><span class="section-number-4">2.3.6.</span> redispatch</h4>
+<div class="outline-text-4" id="text-2-3-6">
+<p>
+​<code>torch::autograd::unamed::VariableType::add_Tensor()</code>​的实现如下，
+</p>
+<div class="org-src-container">
+<pre class="src src-cpp"><span style="font-weight: bold; text-decoration: underline;">at</span>::<span style="font-weight: bold; text-decoration: underline;">Tensor</span> <span style="font-weight: bold; text-decoration: underline;">torch</span>::<span style="font-weight: bold; text-decoration: underline;">autograd</span>::<span style="font-weight: bold; text-decoration: underline;">unamed</span>::<span style="font-weight: bold; text-decoration: underline;">VariableType</span>::<span style="font-weight: bold;">add_Tensor</span>(<span style="font-weight: bold; text-decoration: underline;">c10</span>::<span style="font-weight: bold; text-decoration: underline;">DispatchKeySet</span> <span style="font-weight: bold; font-style: italic;">ks</span>, <span style="font-weight: bold;">const</span> <span style="font-weight: bold; text-decoration: underline;">at</span>::<span style="font-weight: bold; text-decoration: underline;">Tensor</span> &amp; <span style="font-weight: bold; font-style: italic;">self</span>, <span style="font-weight: bold;">const</span> <span style="font-weight: bold; text-decoration: underline;">at</span>::<span style="font-weight: bold; text-decoration: underline;">Tensor</span> &amp; <span style="font-weight: bold; font-style: italic;">other</span>, <span style="font-weight: bold;">const</span> <span style="font-weight: bold; text-decoration: underline;">at</span>::<span style="font-weight: bold; text-decoration: underline;">Scalar</span> &amp; <span style="font-weight: bold; font-style: italic;">alpha</span>) {
+  ...
+  <span style="font-weight: bold;">auto</span> _tmp = ([&amp;]() {
+    <span style="font-weight: bold; text-decoration: underline;">at</span>::<span style="font-weight: bold; text-decoration: underline;">AutoDispatchBelowADInplaceOrView</span> <span style="font-weight: bold; font-style: italic;">guard</span>;
+    <span style="font-weight: bold;">return</span> <span style="font-weight: bold; text-decoration: underline;">at</span>::<span style="font-weight: bold; text-decoration: underline;">redispatch</span>::add(<span style="font-weight: bold; text-decoration: underline;">ks</span> &amp; <span style="font-weight: bold; text-decoration: underline;">c10</span>::<span style="font-weight: bold; font-style: italic;">after_autograd_keyset</span>, self_, other_, alpha);
+  })();
+  ...
+}
+</pre>
+</div>
+<p>
+可以看出，其首先使用​<code>at::AutoDispatchBelowADInplaceOrView guard;</code>​屏蔽掉autograd相关DispatchKeySet, 这可以使得后面Dispatcher流程最终查询到add算子的其它KernelFunction.
+然后，其将执行at::redispatch::add(), 如下：
+</p>
+<div class="org-src-container">
+<pre class="src src-cpp"><span style="font-weight: bold;">inline</span> <span style="font-weight: bold; text-decoration: underline;">at</span>::<span style="font-weight: bold; text-decoration: underline;">Tensor</span> <span style="font-weight: bold; text-decoration: underline;">at</span>::<span style="font-weight: bold; text-decoration: underline;">redispatch</span>::<span style="font-weight: bold;">add</span>(<span style="font-weight: bold; text-decoration: underline;">c10</span>::<span style="font-weight: bold; text-decoration: underline;">DispatchKeySet</span> <span style="font-weight: bold; font-style: italic;">dispatchKeySet</span>, <span style="font-weight: bold;">const</span> <span style="font-weight: bold; text-decoration: underline;">at</span>::<span style="font-weight: bold; text-decoration: underline;">Tensor</span> &amp; <span style="font-weight: bold; font-style: italic;">self</span>, <span style="font-weight: bold;">const</span> <span style="font-weight: bold; text-decoration: underline;">at</span>::<span style="font-weight: bold; text-decoration: underline;">Tensor</span> &amp; <span style="font-weight: bold; font-style: italic;">other</span>, <span style="font-weight: bold;">const</span> <span style="font-weight: bold; text-decoration: underline;">at</span>::<span style="font-weight: bold; text-decoration: underline;">Scalar</span> &amp; <span style="font-weight: bold; font-style: italic;">alpha</span>=1) {
+    <span style="font-weight: bold;">return</span> <span style="font-weight: bold; text-decoration: underline;">at</span>::<span style="font-weight: bold; text-decoration: underline;">_ops</span>::<span style="font-weight: bold; text-decoration: underline;">add_Tensor</span>::redispatch(dispatchKeySet, self, other, alpha);
+}
+
+<span style="font-weight: bold; text-decoration: underline;">at</span>::<span style="font-weight: bold; text-decoration: underline;">Tensor</span> <span style="font-weight: bold; text-decoration: underline;">add_Tensor</span>::<span style="font-weight: bold;">redispatch</span>(<span style="font-weight: bold; text-decoration: underline;">c10</span>::<span style="font-weight: bold; text-decoration: underline;">DispatchKeySet</span> <span style="font-weight: bold; font-style: italic;">dispatchKeySet</span>, <span style="font-weight: bold;">const</span> <span style="font-weight: bold; text-decoration: underline;">at</span>::<span style="font-weight: bold; text-decoration: underline;">Tensor</span> &amp; <span style="font-weight: bold; font-style: italic;">self</span>, <span style="font-weight: bold;">const</span> <span style="font-weight: bold; text-decoration: underline;">at</span>::<span style="font-weight: bold; text-decoration: underline;">Tensor</span> &amp; <span style="font-weight: bold; font-style: italic;">other</span>, <span style="font-weight: bold;">const</span> <span style="font-weight: bold; text-decoration: underline;">at</span>::<span style="font-weight: bold; text-decoration: underline;">Scalar</span> &amp; <span style="font-weight: bold; font-style: italic;">alpha</span>) {
+    <span style="font-weight: bold;">static</span> <span style="font-weight: bold;">auto</span> <span style="font-weight: bold; font-style: italic;">op</span> = create_add_Tensor_typed_handle();
+    <span style="font-weight: bold;">return</span> op.redispatch(dispatchKeySet, self, other, alpha);
+}
+
+C10_ALWAYS_INLINE <span style="font-weight: bold; text-decoration: underline;">Return</span>
+<span style="font-weight: bold;">redispatch</span>(<span style="font-weight: bold; text-decoration: underline;">DispatchKeySet</span> <span style="font-weight: bold; font-style: italic;">currentDispatchKeySet</span>, <span style="font-weight: bold; text-decoration: underline;">Args</span>... <span style="font-weight: bold; font-style: italic;">args</span>) <span style="font-weight: bold;">const</span> {
+  <span style="font-weight: bold;">return</span> <span style="font-weight: bold; text-decoration: underline;">c10</span>::<span style="font-weight: bold; text-decoration: underline;">Dispatcher</span>::singleton().redispatch&lt;Return, <span style="font-weight: bold; text-decoration: underline;">Args</span>...&gt;(
+      *<span style="font-weight: bold;">this</span>, currentDispatchKeySet, <span style="font-weight: bold; text-decoration: underline;">std</span>::forward&lt;<span style="font-weight: bold; text-decoration: underline;">Args</span>&gt;(args)...);
+}
+</pre>
+</div>
+<p>
+最终，将执行到前面的介绍过的Dispatcher::redispatch(), 后面的执行逻辑和前面描述过流程大同小异，因此本节源码分析至此而止。
+</p>
+</div>
+</div>
+</div>
+</div>
+<div id="outline-container-org66ec463" class="outline-2">
+<h2 id="org66ec463"><span class="section-number-2">3.</span> 参考文档</h2>
+<div class="outline-text-2" id="text-3">
+<ol class="org-ol">
+<li><a href="https://docs.pytorch.org/tutorials/advanced/dispatcher.html">https://docs.pytorch.org/tutorials/advanced/dispatcher.html</a></li>
+<li><a href="https://blog.ezyang.com/2019/05/pytorch-internals/">https://blog.ezyang.com/2019/05/pytorch-internals/</a></li>
+<li><a href="https://blog.ezyang.com/2020/09/lets-talk-about-the-pytorch-dispatcher/">https://blog.ezyang.com/2020/09/lets-talk-about-the-pytorch-dispatcher/</a></li>
+<li><a href="https://masutangu.com/2024/06/29/pytorch-code-4/">【PyTorch 源码阅读】Dispatcher 源码篇</a></li>
+<li><a href="https://zhuanlan.zhihu.com/p/386876377">【Pytorch 源码 Detail 系列】Pytorch 中 dispatch 机制及其实现</a></li>
+</ol>
+</div>
+</div>
+
+    </div><!-- /.entry-content -->
+
+  </article>
+</section>
+        <section id="extras" class="body">
+        </section><!-- /#extras -->
+
+</body>
+</html>

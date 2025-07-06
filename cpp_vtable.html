@@ -256,34 +256,34 @@
 
 <div id="text-table-of-contents" role="doc-toc">
 <ul>
-<li><a href="#org58e614d">1. 前言</a></li>
-<li><a href="#orgc7752f3">2. GCC虚继承对象内存布局</a>
+<li><a href="#orgf280753">1. 前言</a></li>
+<li><a href="#org4c6258b">2. GCC虚继承对象内存布局</a>
 <ul>
-<li><a href="#org7898506">2.1. 内存布局</a></li>
-<li><a href="#org1503e64">2.2. 虚函数表</a>
+<li><a href="#org97491e8">2.1. 内存布局</a></li>
+<li><a href="#orgf298c8c">2.2. 虚函数表</a>
 <ul>
-<li><a href="#org786bd1f">2.2.1. 虚函数指针</a></li>
-<li><a href="#orgdfacf1b">2.2.2. Type Info指针</a></li>
-<li><a href="#org05b26a1">2.2.3. Top Offset</a></li>
-<li><a href="#orgf0c2381">2.2.4. VBase Offset</a></li>
-<li><a href="#orgddca1e5">2.2.5. VCall Offset</a></li>
+<li><a href="#org6326698">2.2.1. 虚函数指针</a></li>
+<li><a href="#org5cf15d0">2.2.2. Type Info指针</a></li>
+<li><a href="#orgb1743b7">2.2.3. Top Offset</a></li>
+<li><a href="#orgd8b5923">2.2.4. VBase Offset</a></li>
+<li><a href="#org62a9263">2.2.5. VCall Offset</a></li>
 </ul>
 </li>
-<li><a href="#org0d8d88c">2.3. 对象构造/析构与VTT</a>
+<li><a href="#org30db3eb">2.3. 对象构造/析构与VTT</a>
 <ul>
-<li><a href="#org6362773">2.3.1. CTOR</a></li>
-<li><a href="#org4ccefe6">2.3.2. DTOR</a></li>
+<li><a href="#org2f92943">2.3.1. CTOR</a></li>
+<li><a href="#orgd11b9b5">2.3.2. DTOR</a></li>
 </ul>
 </li>
 </ul>
 </li>
-<li><a href="#orgef26a68">3. 总结</a></li>
-<li><a href="#orgfcfa3e7">4. 参考文档</a></li>
+<li><a href="#orgca1453b">3. 总结</a></li>
+<li><a href="#orgdf5289d">4. 参考文档</a></li>
 </ul>
 </div>
 </div>
-<div id="outline-container-org58e614d" class="outline-2">
-<h2 id="org58e614d"><span class="section-number-2">1.</span> 前言</h2>
+<div id="outline-container-orgf280753" class="outline-2">
+<h2 id="orgf280753"><span class="section-number-2">1.</span> 前言</h2>
 <div class="outline-text-2" id="text-1">
 <p>
 C++允许多重继承，而多重继承会导致一个基类可能被多个子类从多条路径继承多次，进而导致二义性问题。
@@ -303,14 +303,14 @@ C++标准未规定对象内存布局，因此各个编译器的实现也各不�
 </p>
 </div>
 </div>
-<div id="outline-container-orgc7752f3" class="outline-2">
-<h2 id="orgc7752f3"><span class="section-number-2">2.</span> GCC虚继承对象内存布局</h2>
+<div id="outline-container-org4c6258b" class="outline-2">
+<h2 id="org4c6258b"><span class="section-number-2">2.</span> GCC虚继承对象内存布局</h2>
 <div class="outline-text-2" id="text-2">
 <p>
 本文所采用的示例为菱形继承，如下图所示：
 </p>
 
-<div id="orgd9c9be9" class="figure">
+<div id="org0f11f39" class="figure">
 <p><img src="https://github.com/azjf/azjf.github.io/raw/main/img/25/460AEB-C828-4EE1-8310-9C4009AD9EE9/diamond.png" alt="diamond.png" width="500px" />
 </p>
 </div>
@@ -379,8 +379,8 @@ C++标准未规定对象内存布局，因此各个编译器的实现也各不�
 </pre>
 </div>
 </div>
-<div id="outline-container-org7898506" class="outline-3">
-<h3 id="org7898506"><span class="section-number-3">2.1.</span> 内存布局</h3>
+<div id="outline-container-org97491e8" class="outline-3">
+<h3 id="org97491e8"><span class="section-number-3">2.1.</span> 内存布局</h3>
 <div class="outline-text-3" id="text-2-1">
 <p>
 子类内存可以被分为两部分，第一部分存储多个父类对应的subobject，第二部分则存储子类自己的数据成员。
@@ -391,7 +391,7 @@ C++标准未规定对象内存布局，因此各个编译器的实现也各不�
 当具有虚函数时，对象内存的第一块为vptr（vtable指针）。
 比如，A的对象内存布局如下：
 </p>
-<pre class="example" id="orgbd17a8e">
+<pre class="example" id="org21a16ab">
 0 | struct A
 0 |   (A vtable pointer)
 8 |   long a
@@ -407,7 +407,7 @@ C++标准未规定对象内存布局，因此各个编译器的实现也各不�
 <li><p>
 B1的对象内存布局如下：
 </p>
-<pre class="example" id="orga0aa7a8">
+<pre class="example" id="orgba7398e">
  0 | struct B1
  0 |   (B1 vtable pointer)
  8 |   long b1
@@ -420,7 +420,7 @@ B1的对象内存布局如下：
 <li><p>
 C的对象内存布局如下：
 </p>
-<pre class="example" id="org6493369">
+<pre class="example" id="orge8aa13b">
  0 | struct C
  0 |   struct B1 (primary base)
  0 |     (B1 vtable pointer)
@@ -438,8 +438,8 @@ C的对象内存布局如下：
 </ol>
 </div>
 </div>
-<div id="outline-container-org1503e64" class="outline-3">
-<h3 id="org1503e64"><span class="section-number-3">2.2.</span> 虚函数表</h3>
+<div id="outline-container-orgf298c8c" class="outline-3">
+<h3 id="orgf298c8c"><span class="section-number-3">2.2.</span> 虚函数表</h3>
 <div class="outline-text-3" id="text-2-2">
 <p>
 C++子类的虚函数表内容源自扩增和修改后的父类虚函数表内容的集合。
@@ -450,7 +450,7 @@ C++子类的虚函数表内容源自扩增和修改后的父类虚函数表内�
 C的虚函数表的内容比A/B1/B2丰富不少，因此本文将主要分析C的虚函数表。
 C的虚函数表内容如下：
 </p>
-<pre class="example" id="orgb343dd2">
+<pre class="example" id="orga1599e4">
 C::_ZTV1C: 24 entries
 ################################### B1 &amp;&amp; C ####################################
 0     40                                   # 40
@@ -485,8 +485,8 @@ C::_ZTV1C: 24 entries
 在C的虚函数表中，除了虚函数指针外还有其他内容，包括typeinfo指针、top offset、vbase offset和vcall offset，下面将逐一进行分析。
 </p>
 </div>
-<div id="outline-container-org786bd1f" class="outline-4">
-<h4 id="org786bd1f"><span class="section-number-4">2.2.1.</span> 虚函数指针</h4>
+<div id="outline-container-org6326698" class="outline-4">
+<h4 id="org6326698"><span class="section-number-4">2.2.1.</span> 虚函数指针</h4>
 <div class="outline-text-4" id="text-2-2-1">
 <p>
 虚函数表做最重要的内容当然是虚函数指针，大多数C++编译器通过其来实现运行时多态。
@@ -504,7 +504,7 @@ C++ thunk分为non-virtual thunk和virtual thunk，前者为非虚基类subobjec
 </p>
 </div>
 <ol class="org-ol">
-<li><a id="org1217ae4"></a>Non-Virtual Thunk<br />
+<li><a id="org33a54ad"></a>Non-Virtual Thunk<br />
 <div class="outline-text-5" id="text-2-2-1-1">
 <p>
 对应non-virtual thunk, 可以静态地分析出实现对应虚函数的子类subobject的内存地址，因此non-virtual thunk在调用子类实现的虚函数前仅需根据静态分析出来的offset调整一下this指针即可。
@@ -513,7 +513,7 @@ C++ thunk分为non-virtual thunk和virtual thunk，前者为非虚基类subobjec
 <p>
 ​<code>pb2-&gt;f()</code>​对应的汇编代码如下：
 </p>
-<pre class="example" id="orgd422b0f">
+<pre class="example" id="org59ac44a">
 # pb2-&gt;f();
 movq    -24(%rbp), %rax  # this ptr
 movq    (%rax), %rax  # vptr
@@ -539,7 +539,7 @@ jmp     .LTHUNK3
 <p>
 ​<code>pa-&gt;f()</code>​对应的汇编代码如下：
 </p>
-<pre class="example" id="org77c24ee">
+<pre class="example" id="orgf1b9865">
 # pa-&gt;f();
 movq    -32(%rbp), %rax  # this ptr
 movq    (%rax), %rax  # vptr
@@ -557,8 +557,8 @@ jmp     .LTHUNK2
 </li>
 </ol>
 </div>
-<div id="outline-container-orgdfacf1b" class="outline-4">
-<h4 id="orgdfacf1b"><span class="section-number-4">2.2.2.</span> Type Info指针</h4>
+<div id="outline-container-org5cf15d0" class="outline-4">
+<h4 id="org5cf15d0"><span class="section-number-4">2.2.2.</span> Type Info指针</h4>
 <div class="outline-text-4" id="text-2-2-2">
 <p>
 VTable中第一个虚函数指针之前的那个指针为type info指针，其被用于实现Run-Time Type Identification (RTTI)。
@@ -572,7 +572,7 @@ Type info功能本质上和Java的class对象类似，只是其内容没有Java 
 <p>
 dynamic<sub>cast</sub>()和typeid()和对应的汇编代码如下：
 </p>
-<pre class="example" id="orgfbe98b9">
+<pre class="example" id="orga493c65">
 # C *pc = dynamic_cast&lt;C *&gt;(pa);
         movq    -32(%rbp), %rax  # this ptr
         testq   %rax, %rax
@@ -602,8 +602,8 @@ dynamic<sub>cast</sub>()和typeid()和对应的汇编代码如下：
 </p>
 </div>
 </div>
-<div id="outline-container-org05b26a1" class="outline-4">
-<h4 id="org05b26a1"><span class="section-number-4">2.2.3.</span> Top Offset</h4>
+<div id="outline-container-orgb1743b7" class="outline-4">
+<h4 id="orgb1743b7"><span class="section-number-4">2.2.3.</span> Top Offset</h4>
 <div class="outline-text-4" id="text-2-2-3">
 <p>
 VTable中type info指针之前的8 bits内容为top offset，其主要被用于虚继承时指针向下转型的this指针偏移量计算。
@@ -617,7 +617,7 @@ VTable中type info指针之前的8 bits内容为top offset，其主要被用于�
 另外，​<code>dynamic_cast&lt;void *&gt;()</code>​这种corner case会直接通过top offset来确定转型为void指针时所需的this指针偏移量，因为void类型没有typeinfo。
 ​<code>dynamic_cast&lt;void *&gt;()</code>​对应的汇编代码如下：
 </p>
-<pre class="example" id="org40b9a82">
+<pre class="example" id="orgc6af30d">
 # void *pvoid = dynamic_cast&lt;void *&gt;(pa);
         movq    -32(%rbp), %rax  # this ptr
         testq   %rax, %rax
@@ -641,8 +641,8 @@ VTable中type info指针之前的8 bits内容为top offset，其主要被用于�
 </p>
 </div>
 </div>
-<div id="outline-container-orgf0c2381" class="outline-4">
-<h4 id="orgf0c2381"><span class="section-number-4">2.2.4.</span> VBase Offset</h4>
+<div id="outline-container-orgd8b5923" class="outline-4">
+<h4 id="orgd8b5923"><span class="section-number-4">2.2.4.</span> VBase Offset</h4>
 <div class="outline-text-4" id="text-2-2-4">
 <p>
 含虚基类的子类对应的vtable区中type info指针之前的8 bits内容为vbase offset，其被用于在通过子类指针访问虚基类的数据成员时确定虚基类subobject的内存偏移，因此其仅存在于含虚基类的子类对应vtable区中。
@@ -654,7 +654,7 @@ VTable中type info指针之前的8 bits内容为top offset，其主要被用于�
 <p>
 例如，​<code>pb2-&gt;a = 0</code>​对应的汇编代码如下：
 </p>
-<pre class="example" id="orgec9a534">
+<pre class="example" id="org9cce8a3">
 # pb2-&gt;a = 0;
 movq    -24(%rbp), %rax  # this ptr
 movq    (%rax), %rax  # vptr
@@ -670,8 +670,8 @@ movq    $0, 8(%rax)  # ptr to A.a
 </p>
 </div>
 </div>
-<div id="outline-container-orgddca1e5" class="outline-4">
-<h4 id="orgddca1e5"><span class="section-number-4">2.2.5.</span> VCall Offset</h4>
+<div id="outline-container-org62a9263" class="outline-4">
+<h4 id="org62a9263"><span class="section-number-4">2.2.5.</span> VCall Offset</h4>
 <div class="outline-text-4" id="text-2-2-5">
 <p>
 虚基类vtable区中type info指针之前的8 bits内容为vcall offset，其被用于在通过虚基类指针访问子类覆盖过的虚函数时确定虚基类subobject相对子类subobject的偏移，因此其仅存在于含虚基类对应vtable区中。
@@ -690,8 +690,8 @@ VCall offset的汇编代码示例可以见上文中的<a href="#virtual_thunk">v
 </div>
 </div>
 </div>
-<div id="outline-container-org0d8d88c" class="outline-3">
-<h3 id="org0d8d88c"><span class="section-number-3">2.3.</span> 对象构造/析构与VTT</h3>
+<div id="outline-container-org30db3eb" class="outline-3">
+<h3 id="org30db3eb"><span class="section-number-3">2.3.</span> 对象构造/析构与VTT</h3>
 <div class="outline-text-3" id="text-2-3">
 <p>
 除了vtable外，GCC还有virtual table table (VTT), 其主要被用于对象构建时。
@@ -703,17 +703,17 @@ VCall offset的汇编代码示例可以见上文中的<a href="#virtual_thunk">v
 在菱形继承时，由于从子类到虚基类会有多条路径，因此需要特殊处理。
 </p>
 </div>
-<div id="outline-container-org6362773" class="outline-4">
-<h4 id="org6362773"><span class="section-number-4">2.3.1.</span> CTOR</h4>
+<div id="outline-container-org2f92943" class="outline-4">
+<h4 id="org2f92943"><span class="section-number-4">2.3.1.</span> CTOR</h4>
 </div>
 
-<div id="outline-container-org4ccefe6" class="outline-4">
-<h4 id="org4ccefe6"><span class="section-number-4">2.3.2.</span> DTOR</h4>
+<div id="outline-container-orgd11b9b5" class="outline-4">
+<h4 id="orgd11b9b5"><span class="section-number-4">2.3.2.</span> DTOR</h4>
 </div>
 </div>
 </div>
-<div id="outline-container-orgef26a68" class="outline-2">
-<h2 id="orgef26a68"><span class="section-number-2">3.</span> 总结</h2>
+<div id="outline-container-orgca1453b" class="outline-2">
+<h2 id="orgca1453b"><span class="section-number-2">3.</span> 总结</h2>
 <div class="outline-text-2" id="text-3">
 <p>
 本文从一个简单例子出发来分析GCC所使用的C++虚继承的对象内存布局。
@@ -722,8 +722,8 @@ VCall offset的汇编代码示例可以见上文中的<a href="#virtual_thunk">v
 </p>
 </div>
 </div>
-<div id="outline-container-orgfcfa3e7" class="outline-2">
-<h2 id="orgfcfa3e7"><span class="section-number-2">4.</span> 参考文档</h2>
+<div id="outline-container-orgdf5289d" class="outline-2">
+<h2 id="orgdf5289d"><span class="section-number-2">4.</span> 参考文档</h2>
 <div class="outline-text-2" id="text-4">
 <ol class="org-ol">
 <li><a href="https://itanium-cxx-abi.github.io/cxx-abi/abi.html">https://itanium-cxx-abi.github.io/cxx-abi/abi.html</a></li>

@@ -256,19 +256,19 @@
 
 <div id="text-table-of-contents" role="doc-toc">
 <ul>
-<li><a href="#org820f687">1. 右值引用与Universal引用</a>
+<li><a href="#org568c8a3">1. 右值引用与Universal引用</a>
 <ul>
-<li><a href="#orgfc22396">1.1. 右值引用变量本身是左值</a></li>
-<li><a href="#org3ea3f0b">1.2. 模板函数Universal引用入参</a></li>
+<li><a href="#org55e15aa">1.1. 右值引用变量本身是左值</a></li>
+<li><a href="#orgf4d4098">1.2. 模板函数Universal引用入参</a></li>
 </ul>
 </li>
-<li><a href="#org39768cf">2. std::move/forward()实现原理</a>
+<li><a href="#org822923d">2. std::move/forward()实现原理</a>
 <ul>
-<li><a href="#orge44c17f">2.1. std::move()</a></li>
-<li><a href="#orgc6adf52">2.2. std::forward()</a></li>
+<li><a href="#orga3c3ebe">2.1. std::move()</a></li>
+<li><a href="#org7524b4a">2.2. std::forward()</a></li>
 </ul>
 </li>
-<li><a href="#org13b74d1">3. 参考文档</a></li>
+<li><a href="#org290584c">3. 参考文档</a></li>
 </ul>
 </div>
 </div>
@@ -291,14 +291,14 @@ f(<span style="font-weight: bold; text-decoration: underline;">std</span>::move(
 <p>
 本文接下来将讨论C++右值引用和语法与之相似的模板函数Universal引用入参，以及std::move/forward()的实现原理。
 </p>
-<div id="outline-container-org820f687" class="outline-2">
-<h2 id="org820f687"><span class="section-number-2">1.</span> 右值引用与Universal引用</h2>
+<div id="outline-container-org568c8a3" class="outline-2">
+<h2 id="org568c8a3"><span class="section-number-2">1.</span> 右值引用与Universal引用</h2>
 <div class="outline-text-2" id="text-1">
 <p>
 C++表达式结果可以被分为lvalue (left) / rvalue (right) / xvalue  (eXpiring) /glvalue (generalized) / prvalue (pure), 它们之间的关系如<a href="https://stackoverflow.com/questions/3601602/what-are-rvalues-lvalues-xvalues-glvalues-and-prvalues">下图</a>所示：
 </p>
 
-<div id="orgd50f384" class="figure">
+<div id="orga6ac72d" class="figure">
 <p><img src="https://github.com/azjf/azjf.github.io/raw/main/img/39/2BF8C9-28BA-4E63-BF45-1DBE6E4B7042/expression_type.png" alt="expression_type.png" width="300px" />
 </p>
 </div>
@@ -312,8 +312,8 @@ C++表达式结果可以被分为lvalue (left) / rvalue (right) / xvalue  (eXpir
 此外，具有右值引用入参的函数也是右值引用的消费者，此时右值引用的主要目的是表明当函数被执行后其原实参数据将被消耗殆尽。
 </p>
 </div>
-<div id="outline-container-orgfc22396" class="outline-3">
-<h3 id="orgfc22396"><span class="section-number-3">1.1.</span> 右值引用变量本身是左值</h3>
+<div id="outline-container-org55e15aa" class="outline-3">
+<h3 id="org55e15aa"><span class="section-number-3">1.1.</span> 右值引用变量本身是左值</h3>
 <div class="outline-text-3" id="text-1-1">
 <p>
 右值引用变量本身是左值，因此不可将一个右值引用变量赋值给另外一个右值引用变量，如下：
@@ -340,8 +340,8 @@ f(ra);  <span style="font-weight: bold; font-style: italic;">// </span><span sty
 </p>
 </div>
 </div>
-<div id="outline-container-org3ea3f0b" class="outline-3">
-<h3 id="org3ea3f0b"><span class="section-number-3">1.2.</span> 模板函数Universal引用入参</h3>
+<div id="outline-container-orgf4d4098" class="outline-3">
+<h3 id="orgf4d4098"><span class="section-number-3">1.2.</span> 模板函数Universal引用入参</h3>
 <div class="outline-text-3" id="text-1-2">
 <p>
 Universal引用的在语法上很像右值引用，但其实两者完全不同。
@@ -358,12 +358,12 @@ Universal引用是一种函数模板参数，其主要被用于参数完美转�
 </div>
 </div>
 </div>
-<div id="outline-container-org39768cf" class="outline-2">
-<h2 id="org39768cf"><span class="section-number-2">2.</span> std::move/forward()实现原理</h2>
+<div id="outline-container-org822923d" class="outline-2">
+<h2 id="org822923d"><span class="section-number-2">2.</span> std::move/forward()实现原理</h2>
 <div class="outline-text-2" id="text-2">
 </div>
-<div id="outline-container-orge44c17f" class="outline-3">
-<h3 id="orge44c17f"><span class="section-number-3">2.1.</span> std::move()</h3>
+<div id="outline-container-orga3c3ebe" class="outline-3">
+<h3 id="orga3c3ebe"><span class="section-number-3">2.1.</span> std::move()</h3>
 <div class="outline-text-3" id="text-2-1">
 <p>
 move()被用于生成右值引用，其是基于static<sub>cast实现的</sub>，具体<a href="https://github.com/gcc-mirror/gcc/blob/releases/gcc-14.2.0/libstdc%2B%2B-v3/include/bits/move.h#L67">GCC实现源码</a>如下：
@@ -397,8 +397,8 @@ static<sub>cast</sub>&lt;T&amp;&amp;&gt;()的结果为右值，因此可以被�
 </p>
 </div>
 </div>
-<div id="outline-container-orgc6adf52" class="outline-3">
-<h3 id="orgc6adf52"><span class="section-number-3">2.2.</span> std::forward()</h3>
+<div id="outline-container-org7524b4a" class="outline-3">
+<h3 id="org7524b4a"><span class="section-number-3">2.2.</span> std::forward()</h3>
 <div class="outline-text-3" id="text-2-2">
 <p>
 ​<b>forward()需要在使用时显示指明参数类型，其实现为相互重载的两个函数模板</b>​, 两者函数体相同，其目的是确保显示实例化后的两个forward()实例可以匹配到可能的左/右值两种实参（move()则通过universal引用来接受这两种可能的实参），进而实现完美转发左/右值。
@@ -482,8 +482,8 @@ f(i);
 </div>
 </div>
 </div>
-<div id="outline-container-org13b74d1" class="outline-2">
-<h2 id="org13b74d1"><span class="section-number-2">3.</span> 参考文档</h2>
+<div id="outline-container-org290584c" class="outline-2">
+<h2 id="org290584c"><span class="section-number-2">3.</span> 参考文档</h2>
 <div class="outline-text-2" id="text-3">
 <ol class="org-ol">
 <li>Effective Modern C++ Chapter 5: Rvalue References, Move Semantics, and Perfect Forwarding</li>

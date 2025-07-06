@@ -256,8 +256,8 @@
 
 <div id="text-table-of-contents" role="doc-toc">
 <ul>
-<li><a href="#orge611f8f">1. 算法实现</a></li>
-<li><a href="#orgbc7af12">2. 参考文档</a></li>
+<li><a href="#org057ba7e">1. 算法实现</a></li>
+<li><a href="#orgb4f23af">2. 参考文档</a></li>
 </ul>
 </div>
 </div>
@@ -266,8 +266,8 @@ GCC STL源自SGI STL, 其使用的std::sort()使用的算法为quick sort / inse
 而list itertor为BidirectionalIterator, 因此不能满足std::sort()的需求。
 list提供了一个成员版sort()算法，其本质上是一种bottom-up merge sort (侯捷STL源码剖析 P142中的quick sort说法有误), 本文接下来将对其<a href="https://github.com/gcc-mirror/gcc/blob/releases/gcc-12.2.0/libstdc%2B%2B-v3/include/bits/list.tcc#L479">GCC 12.2.0版代码</a>进行分析，希望能对大家有所帮助。
 </p>
-<div id="outline-container-orge611f8f" class="outline-2">
-<h2 id="orge611f8f"><span class="section-number-2">1.</span> 算法实现</h2>
+<div id="outline-container-org057ba7e" class="outline-2">
+<h2 id="org057ba7e"><span class="section-number-2">1.</span> 算法实现</h2>
 <div class="outline-text-2" id="text-1">
 <p>
 GCC版list::sort()算法基本上和最初的SGI版完全一致（可见GCC代码注释），其本质上是一种bottom-up merge sort, 具体算法流程如下：
@@ -337,8 +337,8 @@ list元素是离散存储的，因此无需使用tmp buffer来存储merge sort�
 </p>
 </div>
 </div>
-<div id="outline-container-orgbc7af12" class="outline-2">
-<h2 id="orgbc7af12"><span class="section-number-2">2.</span> 参考文档</h2>
+<div id="outline-container-orgb4f23af" class="outline-2">
+<h2 id="orgb4f23af"><span class="section-number-2">2.</span> 参考文档</h2>
 <div class="outline-text-2" id="text-2">
 <ol class="org-ol">
 <li>STL源码剖析 P142</li>

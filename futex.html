@@ -256,22 +256,22 @@
 
 <div id="text-table-of-contents" role="doc-toc">
 <ul>
-<li><a href="#orgbd44d79">1. Mutex/CondVar/Semaphore功能与实现逻辑分析</a>
+<li><a href="#org1ef1c4d">1. Mutex/CondVar/Semaphore功能与实现逻辑分析</a>
 <ul>
-<li><a href="#org17ba824">1.1. Mutex/CondVar/Semaphore功能与底层能力依赖</a></li>
-<li><a href="#orgeb8c48f">1.2. 原子变量与内存屏障</a></li>
-<li><a href="#org481bde8">1.3. Kernel进程等待队列</a></li>
+<li><a href="#org9a191c3">1.1. Mutex/CondVar/Semaphore功能与底层能力依赖</a></li>
+<li><a href="#org4caffa1">1.2. 原子变量与内存屏障</a></li>
+<li><a href="#org83ea8d9">1.3. Kernel进程等待队列</a></li>
 </ul>
 </li>
-<li><a href="#org5c555d5">2. 基于Futex的Mutex/CondVar实现原理与Demo</a>
+<li><a href="#orgcbc5a9b">2. 基于Futex的Mutex/CondVar实现原理与Demo</a>
 <ul>
-<li><a href="#orgf7b1d0e">2.1. Futex简介</a></li>
-<li><a href="#orgd2a3503">2.2. Mutex实现原理</a></li>
-<li><a href="#org693f328">2.3. CondVar实现原理</a></li>
-<li><a href="#org421f55f">2.4. Semaphore实现原理</a></li>
+<li><a href="#org91a1413">2.1. Futex简介</a></li>
+<li><a href="#org806f125">2.2. Mutex实现原理</a></li>
+<li><a href="#orgcfb3c5b">2.3. CondVar实现原理</a></li>
+<li><a href="#orge2984f6">2.4. Semaphore实现原理</a></li>
 </ul>
 </li>
-<li><a href="#org04cfe5b">3. 参考文档</a></li>
+<li><a href="#org910af18">3. 参考文档</a></li>
 </ul>
 </div>
 </div>
@@ -283,15 +283,15 @@ Linux下用户态同步机制主要包括互斥锁mutex/信号量semaphore和条
 <p>
 本文仅浅谈mutex/condvar/semaphore的实现原理（不会深入地分析libphread和futex的实现细节），希望能以较短篇幅揭开同步机制实现原理的神秘面纱。
 </p>
-<div id="outline-container-orgbd44d79" class="outline-2">
-<h2 id="orgbd44d79"><span class="section-number-2">1.</span> Mutex/CondVar/Semaphore功能与实现逻辑分析</h2>
+<div id="outline-container-org1ef1c4d" class="outline-2">
+<h2 id="org1ef1c4d"><span class="section-number-2">1.</span> Mutex/CondVar/Semaphore功能与实现逻辑分析</h2>
 <div class="outline-text-2" id="text-1">
 <p>
 我们先分析一下mutex/condvar/semaphore的功能和理论实现逻辑，然后简要介绍其依赖的底层能力的实现原理。
 </p>
 </div>
-<div id="outline-container-org17ba824" class="outline-3">
-<h3 id="org17ba824"><span class="section-number-3">1.1.</span> Mutex/CondVar/Semaphore功能与底层能力依赖</h3>
+<div id="outline-container-org9a191c3" class="outline-3">
+<h3 id="org9a191c3"><span class="section-number-3">1.1.</span> Mutex/CondVar/Semaphore功能与底层能力依赖</h3>
 <div class="outline-text-3" id="text-1-1">
 <p>
 Mutex被用于实现多个线程对资源的互斥访问，当资源被别的线程占用时，mutex需要挂起当前线程；而当使用完资源后，mutex需要唤醒其它因等待该mutex而被挂起的线程。
@@ -322,8 +322,8 @@ Mutex可以看作其互斥版，但是，​<b>mutex仅能被锁持有线程释�
 </p>
 </div>
 </div>
-<div id="outline-container-orgeb8c48f" class="outline-3">
-<h3 id="orgeb8c48f"><span class="section-number-3">1.2.</span> 原子变量与内存屏障</h3>
+<div id="outline-container-org4caffa1" class="outline-3">
+<h3 id="org4caffa1"><span class="section-number-3">1.2.</span> 原子变量与内存屏障</h3>
 <div class="outline-text-3" id="text-1-2">
 <p>
 ​<b>免责声明：本小节内容可能有不少错误，请慎用。</b>​
@@ -354,10 +354,13 @@ Mutex可以看作其互斥版，但是，​<b>mutex仅能被锁持有线程释�
 <p>
 GCC提供的<a href="https://gcc.gnu.org/onlinedocs/gcc/_005f_005fatomic-Builtins.html">_<sub>atomic系列内置函数</sub></a>在保证原子性的同时还会执行mfence等指令以保证内存顺序，C++11也规范了<a href="https://people.cs.pitt.edu/~xianeizhang/notes/cpp11_mem.html">内存模型</a>来解决这些问题。
 </p>
+<ol class="org-ol">
+<li>3. ​<b>TODO 原子变量读写内存顺序</b>​，可参考<a href="https://en.cppreference.com/w/cpp/atomic/memory_order.html">https://en.cppreference.com/w/cpp/atomic/memory_order.html</a>.</li>
+</ol>
 </div>
 </div>
-<div id="outline-container-org481bde8" class="outline-3">
-<h3 id="org481bde8"><span class="section-number-3">1.3.</span> Kernel进程等待队列</h3>
+<div id="outline-container-org83ea8d9" class="outline-3">
+<h3 id="org83ea8d9"><span class="section-number-3">1.3.</span> Kernel进程等待队列</h3>
 <div class="outline-text-3" id="text-1-3">
 <p>
 Kernel进程等待队列本质上是通过设置进程调度状态为Interruptible/Uninterruptible Sleep来实现的。
@@ -367,12 +370,12 @@ Kernel进程调度器仅会给Running/Runnable状态的进程分配时间片，�
 </div>
 </div>
 </div>
-<div id="outline-container-org5c555d5" class="outline-2">
-<h2 id="org5c555d5"><span class="section-number-2">2.</span> 基于Futex的Mutex/CondVar实现原理与Demo</h2>
+<div id="outline-container-orgcbc5a9b" class="outline-2">
+<h2 id="orgcbc5a9b"><span class="section-number-2">2.</span> 基于Futex的Mutex/CondVar实现原理与Demo</h2>
 <div class="outline-text-2" id="text-2">
 </div>
-<div id="outline-container-orgf7b1d0e" class="outline-3">
-<h3 id="orgf7b1d0e"><span class="section-number-3">2.1.</span> Futex简介</h3>
+<div id="outline-container-org91a1413" class="outline-3">
+<h3 id="org91a1413"><span class="section-number-3">2.1.</span> Futex简介</h3>
 <div class="outline-text-3" id="text-2-1">
 <p>
 Kernel内部实现有mutex/semaphore，理论上可以将作为系统调用syscall提供给用户态程序使用，但是这样做的话效率不高，原因如下：
@@ -414,20 +417,20 @@ Futex syscall基础版原型如下，其可以被传入用户态锁原子变量�
 </p>
 </div>
 </div>
-<div id="outline-container-orgd2a3503" class="outline-3">
-<h3 id="orgd2a3503"><span class="section-number-3">2.2.</span> Mutex实现原理</h3>
+<div id="outline-container-org806f125" class="outline-3">
+<h3 id="org806f125"><span class="section-number-3">2.2.</span> Mutex实现原理</h3>
 </div>
 
-<div id="outline-container-org693f328" class="outline-3">
-<h3 id="org693f328"><span class="section-number-3">2.3.</span> CondVar实现原理</h3>
+<div id="outline-container-orgcfb3c5b" class="outline-3">
+<h3 id="orgcfb3c5b"><span class="section-number-3">2.3.</span> CondVar实现原理</h3>
 </div>
 
-<div id="outline-container-org421f55f" class="outline-3">
-<h3 id="org421f55f"><span class="section-number-3">2.4.</span> Semaphore实现原理</h3>
+<div id="outline-container-orge2984f6" class="outline-3">
+<h3 id="orge2984f6"><span class="section-number-3">2.4.</span> Semaphore实现原理</h3>
 </div>
 </div>
-<div id="outline-container-org04cfe5b" class="outline-2">
-<h2 id="org04cfe5b"><span class="section-number-2">3.</span> 参考文档</h2>
+<div id="outline-container-org910af18" class="outline-2">
+<h2 id="org910af18"><span class="section-number-2">3.</span> 参考文档</h2>
 <div class="outline-text-2" id="text-3">
 <ol class="org-ol">
 <li><a href="https://stackoverflow.com/questions/33431953/how-is-conditional-wait-implemented-at-the-kernel-and-hardware-assembly-level">https://stackoverflow.com/questions/33431953/how-is-conditional-wait-implemented-at-the-kernel-and-hardware-assembly-level</a></li>

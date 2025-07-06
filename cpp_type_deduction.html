@@ -256,10 +256,10 @@
 
 <div id="text-table-of-contents" role="doc-toc">
 <ul>
-<li><a href="#org62f6c1a">1. 模板参数类型推导</a></li>
-<li><a href="#orge6b5363">2. auto</a></li>
-<li><a href="#org01d84b1">3. decltype</a></li>
-<li><a href="#org054242c">4. 参考文档</a></li>
+<li><a href="#orgb1e614b">1. 模板参数类型推导</a></li>
+<li><a href="#org01fe77c">2. auto</a></li>
+<li><a href="#org9df29a1">3. decltype</a></li>
+<li><a href="#org39e183e">4. 参考文档</a></li>
 </ul>
 </div>
 </div>
@@ -269,8 +269,8 @@ auto关键字的类型推导规则基本上和模板参数类型推导规则一�
 decltype可以原汁原味地返回变量名对应的变量类型，其可以完成auto关键字不能胜任的一些corner case任务。
 本文接下来将以较短的篇幅对这三者进行介绍，希望能对大家有所帮助。
 </p>
-<div id="outline-container-org62f6c1a" class="outline-2">
-<h2 id="org62f6c1a"><span class="section-number-2">1.</span> 模板参数类型推导</h2>
+<div id="outline-container-orgb1e614b" class="outline-2">
+<h2 id="orgb1e614b"><span class="section-number-2">1.</span> 模板参数类型推导</h2>
 <div class="outline-text-2" id="text-1">
 <p>
 对于函数模板 ​<code>template&lt;typename T&gt; f(T&amp;|T*|T&amp;&amp;|T)</code>​，其模板参数类型的可选类型包括T&amp;|T*|T&amp;&amp;|T.
@@ -402,8 +402,8 @@ decltype可以原汁原味地返回变量名对应的变量类型，其可以完
 </table>
 </div>
 </div>
-<div id="outline-container-orge6b5363" class="outline-2">
-<h2 id="orge6b5363"><span class="section-number-2">2.</span> auto</h2>
+<div id="outline-container-org01fe77c" class="outline-2">
+<h2 id="org01fe77c"><span class="section-number-2">2.</span> auto</h2>
 <div class="outline-text-2" id="text-2">
 <p>
 auto类型推导规则和template参数类型推导基本一致，它们之间的映射的关系如下：
@@ -445,8 +445,8 @@ auto和template参数类型推导规则唯一不同之处在于当实参为初�
 </p>
 </div>
 </div>
-<div id="outline-container-org01d84b1" class="outline-2">
-<h2 id="org01d84b1"><span class="section-number-2">3.</span> decltype</h2>
+<div id="outline-container-org9df29a1" class="outline-2">
+<h2 id="org9df29a1"><span class="section-number-2">3.</span> decltype</h2>
 <div class="outline-text-2" id="text-3">
 <p>
 decltype可以原汁原味地不加任何修饰地返回变量名的类型， 其类型推导规则如下：
@@ -506,8 +506,8 @@ decltype(auto)可以完成一些auto不能完成的任务，比如下面代码�
 </p>
 </div>
 </div>
-<div id="outline-container-org054242c" class="outline-2">
-<h2 id="org054242c"><span class="section-number-2">4.</span> 参考文档</h2>
+<div id="outline-container-org39e183e" class="outline-2">
+<h2 id="org39e183e"><span class="section-number-2">4.</span> 参考文档</h2>
 <div class="outline-text-2" id="text-4">
 <ol class="org-ol">
 <li>Effective Modern C++ Chapter 1: Deducing Types</li>

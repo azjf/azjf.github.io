@@ -256,13 +256,13 @@
 
 <div id="text-table-of-contents" role="doc-toc">
 <ul>
-<li><a href="#orgbf15314">1. 变量/表达式/语句</a></li>
-<li><a href="#org9ec52ad">2. 函数</a></li>
-<li><a href="#orgeb46227">3. 类</a></li>
-<li><a href="#orgbe5ed81">4. 模板/泛型</a></li>
-<li><a href="#orga2f910b">5. 标准库</a></li>
-<li><a href="#org778877b">6. 其它</a></li>
-<li><a href="#org14af142">7. 总结</a></li>
+<li><a href="#org2c8c59c">1. 变量/表达式/语句</a></li>
+<li><a href="#orgd14de0e">2. 函数</a></li>
+<li><a href="#org5e83a9a">3. 类</a></li>
+<li><a href="#orgf82e393">4. 模板/泛型</a></li>
+<li><a href="#orgca33189">5. 标准库</a></li>
+<li><a href="#orgcbb2122">6. 其它</a></li>
+<li><a href="#orgb91bceb">7. 总结</a></li>
 </ul>
 </div>
 </div>
@@ -270,8 +270,8 @@
 整体而言，C++语义比Java细腻很多，表达力远胜于Java, 当然这也导致开发时更大的心理包袱。
 接下来，本文将从多个层级上讨论C++和Java语言特性的主要区别，希望能对大家有所帮助。
 </p>
-<div id="outline-container-orgbf15314" class="outline-2">
-<h2 id="orgbf15314"><span class="section-number-2">1.</span> 变量/表达式/语句</h2>
+<div id="outline-container-org2c8c59c" class="outline-2">
+<h2 id="org2c8c59c"><span class="section-number-2">1.</span> 变量/表达式/语句</h2>
 <div class="outline-text-2" id="text-1">
 <ol class="org-ol">
 <li>C++ int/char/float/double等基础类型是变长的，这是为了能够更好地发挥具有不同字长的各体系架构的性能。
@@ -285,8 +285,8 @@
 </ol>
 </div>
 </div>
-<div id="outline-container-org9ec52ad" class="outline-2">
-<h2 id="org9ec52ad"><span class="section-number-2">2.</span> 函数</h2>
+<div id="outline-container-orgd14de0e" class="outline-2">
+<h2 id="orgd14de0e"><span class="section-number-2">2.</span> 函数</h2>
 <div class="outline-text-2" id="text-2">
 <ol class="org-ol">
 <li>C++函数虽然不是一等公民，但其可以被以指针形式存入变量，而Java仅能将其通过lambda包装为匿名类对象后再存于变量中，因此多少有些笨重。</li>
@@ -301,8 +301,8 @@
 </ol>
 </div>
 </div>
-<div id="outline-container-orgeb46227" class="outline-2">
-<h2 id="orgeb46227"><span class="section-number-2">3.</span> 类</h2>
+<div id="outline-container-org5e83a9a" class="outline-2">
+<h2 id="org5e83a9a"><span class="section-number-2">3.</span> 类</h2>
 <div class="outline-text-2" id="text-3">
 <ol class="org-ol">
 <li>对象构造与销毁
@@ -334,8 +334,8 @@ Java对象内存中保存的是属性引用，属性实际内存则散落于堆�
 </ol>
 </div>
 </div>
-<div id="outline-container-orgbe5ed81" class="outline-2">
-<h2 id="orgbe5ed81"><span class="section-number-2">4.</span> 模板/泛型</h2>
+<div id="outline-container-orgf82e393" class="outline-2">
+<h2 id="orgf82e393"><span class="section-number-2">4.</span> 模板/泛型</h2>
 <div class="outline-text-2" id="text-4">
 <ol class="org-ol">
 <li>C++模板的作用时机为编译时，其是自身是图灵完备的，进化出了模板元编程之类的黑魔法。
@@ -345,8 +345,8 @@ Java无类似功能，其方法甚至不能脱离类而独立存在。</li>
 </ol>
 </div>
 </div>
-<div id="outline-container-orga2f910b" class="outline-2">
-<h2 id="orga2f910b"><span class="section-number-2">5.</span> 标准库</h2>
+<div id="outline-container-orgca33189" class="outline-2">
+<h2 id="orgca33189"><span class="section-number-2">5.</span> 标准库</h2>
 <div class="outline-text-2" id="text-5">
 <ol class="org-ol">
 <li>STL容器接口比Java集合接口命名更规范，比如STL容器元素数量都可以用size()来获取，而Java有size()函数、length属性和length()方法等。
@@ -356,8 +356,8 @@ STL容器接口命名规范也是其可以将泛型算法独立于容器的根�
 </ol>
 </div>
 </div>
-<div id="outline-container-org778877b" class="outline-2">
-<h2 id="org778877b"><span class="section-number-2">6.</span> 其它</h2>
+<div id="outline-container-orgcbb2122" class="outline-2">
+<h2 id="orgcbb2122"><span class="section-number-2">6.</span> 其它</h2>
 <div class="outline-text-2" id="text-6">
 <ol class="org-ol">
 <li>C++有很多undefined behavior, 因为其为了性能最大化而基本上不检查边界条件（其认为边界条件检查是用户责任，因为并非所有应用都需要检查每一个边界条件）。
@@ -367,8 +367,8 @@ Oracle则对Java有很强的控制力，因此较少出现这种情况。</li>
 </ol>
 </div>
 </div>
-<div id="outline-container-org14af142" class="outline-2">
-<h2 id="org14af142"><span class="section-number-2">7.</span> 总结</h2>
+<div id="outline-container-orgb91bceb" class="outline-2">
+<h2 id="orgb91bceb"><span class="section-number-2">7.</span> 总结</h2>
 <div class="outline-text-2" id="text-7">
 <p>
 本文从多个层级上讨论了C++和Java主要区别，暂时先写这些，以后想到时再补充。

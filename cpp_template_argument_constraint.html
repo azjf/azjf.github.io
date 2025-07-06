@@ -256,9 +256,9 @@
 
 <div id="text-table-of-contents" role="doc-toc">
 <ul>
-<li><a href="#org1233291">1. SFINAE与std::enable_<sub>if实现原理</sub></a></li>
-<li><a href="#orgd9aad29">2. C++ 20 Concept</a></li>
-<li><a href="#orga6b7bf5">3. 参考文档</a></li>
+<li><a href="#org986fed2">1. SFINAE与std::enable_<sub>if实现原理</sub></a></li>
+<li><a href="#orgd6b0323">2. C++ 20 Concept</a></li>
+<li><a href="#orgf2d2fb1">3. 参考文档</a></li>
 </ul>
 </div>
 </div>
@@ -272,8 +272,8 @@ C++模板是编译时泛型机制，其可以通过编译时绑定来实现类�
 在C++ 20之前，这主要是通过Substitution Failure Is Not An Error (SFINAE)等模板元编程黑魔法来实现的，而C++ 20则在语法层面提出了concept概念来约束模板参数类型。
 本文接下来对这两者分别进行讨论，希望能对大家有所帮助。
 </p>
-<div id="outline-container-org1233291" class="outline-2">
-<h2 id="org1233291"><span class="section-number-2">1.</span> SFINAE与std::enable_<sub>if实现原理</sub></h2>
+<div id="outline-container-org986fed2" class="outline-2">
+<h2 id="org986fed2"><span class="section-number-2">1.</span> SFINAE与std::enable_<sub>if实现原理</sub></h2>
 <div class="outline-text-2" id="text-1">
 <p>
 模板参数一般对可实例化的类型是有要求的，只是这种类型要求是​<b>隐式</b>​的（而不是如普通函数形参等显示指出的类型要求），而这可以被看作是一种​<b>鸭子类型</b>​ducking type要求。
@@ -347,8 +347,8 @@ SFINAE的一个主要问题在于当模板实参不满足模板形参的隐式�
 </p>
 </div>
 </div>
-<div id="outline-container-orgd9aad29" class="outline-2">
-<h2 id="orgd9aad29"><span class="section-number-2">2.</span> C++ 20 Concept</h2>
+<div id="outline-container-orgd6b0323" class="outline-2">
+<h2 id="orgd6b0323"><span class="section-number-2">2.</span> C++ 20 Concept</h2>
 <div class="outline-text-2" id="text-2">
 <p>
 C++ 20提出concept以​<b>显示约束模板参数类型</b>​，其比基于SFINAE的std::enable<sub>if的编程体验更好</sub>。
@@ -399,8 +399,8 @@ f(<span style="font-style: italic;">'A'</span>);  <span style="font-weight: bold
 </p>
 </div>
 </div>
-<div id="outline-container-orga6b7bf5" class="outline-2">
-<h2 id="orga6b7bf5"><span class="section-number-2">3.</span> 参考文档</h2>
+<div id="outline-container-orgf2d2fb1" class="outline-2">
+<h2 id="orgf2d2fb1"><span class="section-number-2">3.</span> 参考文档</h2>
 <div class="outline-text-2" id="text-3">
 <ol class="org-ol">
 <li><a href="https://en.cppreference.com/w/cpp/types/enable_if.html">https://en.cppreference.com/w/cpp/types/enable_if.html</a></li>
