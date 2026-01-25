@@ -1,0 +1,505 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <meta name="generator" content="Pelican" />
+        <title>浅谈C++ Memory Order - 从Singleton说起</title>
+        <link rel="stylesheet" href="/theme/css/main.css" />
+        <meta name="description" content="1. 前言 2. C++ 11 Memory Order简介 2.1. Relaxed内存顺序 2.2. Acquire-Release内存顺序 2.3. Sequential Consistency内存顺序 3. Singleton实现 3.1...." />
+
+        <style>
+          /* #content { max-width: 60em; margin: auto; } */
+          .title  { text-align: center;
+                     margin-bottom: .2em; }
+          .subtitle { text-align: center;
+                      font-size: medium;
+                      font-weight: bold;
+                      margin-top:0; }
+          .todo   { font-family: monospace; color: red; }
+          .done   { font-family: monospace; color: green; }
+          .priority { font-family: monospace; color: orange; }
+          .tag    { background-color: #eee; font-family: monospace;
+                    padding: 2px; font-size: 80%; font-weight: normal; }
+          .timestamp { color: #bebebe; }
+          .timestamp-kwd { color: #5f9ea0; }
+          .org-right  { margin-left: auto; margin-right: 0px;  text-align: right; }
+          .org-left   { margin-left: 0px;  margin-right: auto; text-align: left; }
+          .org-center { margin-left: auto; margin-right: auto; text-align: center; }
+          .underline { text-decoration: underline; }
+          #postamble p, #preamble p { font-size: 90%; margin: .2em; }
+          p.verse { margin-left: 3%; }
+          pre {
+            border: 1px solid #e6e6e6;
+            border-radius: 3px;
+            background-color: #f2f2f2;
+            padding: 8pt;
+            font-family: monospace;
+            overflow: auto;
+            margin: 1.2em;
+          }
+          pre.src {
+            position: relative;
+            overflow: auto;
+          }
+          pre.src:before {
+            display: none;
+            position: absolute;
+            top: -8px;
+            right: 12px;
+            padding: 3px;
+            color: #555;
+            background-color: #f2f2f299;
+          }
+          pre.src:hover:before { display: inline; margin-top: 14px;}
+          /* Languages per Org manual */
+          pre.src-asymptote:before { content: 'Asymptote'; }
+          pre.src-awk:before { content: 'Awk'; }
+          pre.src-authinfo::before { content: 'Authinfo'; }
+          pre.src-C:before { content: 'C'; }
+          /* pre.src-C++ doesn't work in CSS */
+          pre.src-clojure:before { content: 'Clojure'; }
+          pre.src-css:before { content: 'CSS'; }
+          pre.src-D:before { content: 'D'; }
+          pre.src-ditaa:before { content: 'ditaa'; }
+          pre.src-dot:before { content: 'Graphviz'; }
+          pre.src-calc:before { content: 'Emacs Calc'; }
+          pre.src-emacs-lisp:before { content: 'Emacs Lisp'; }
+          pre.src-fortran:before { content: 'Fortran'; }
+          pre.src-gnuplot:before { content: 'gnuplot'; }
+          pre.src-haskell:before { content: 'Haskell'; }
+          pre.src-hledger:before { content: 'hledger'; }
+          pre.src-java:before { content: 'Java'; }
+          pre.src-js:before { content: 'Javascript'; }
+          pre.src-latex:before { content: 'LaTeX'; }
+          pre.src-ledger:before { content: 'Ledger'; }
+          pre.src-lisp:before { content: 'Lisp'; }
+          pre.src-lilypond:before { content: 'Lilypond'; }
+          pre.src-lua:before { content: 'Lua'; }
+          pre.src-matlab:before { content: 'MATLAB'; }
+          pre.src-mscgen:before { content: 'Mscgen'; }
+          pre.src-ocaml:before { content: 'Objective Caml'; }
+          pre.src-octave:before { content: 'Octave'; }
+          pre.src-org:before { content: 'Org mode'; }
+          pre.src-oz:before { content: 'OZ'; }
+          pre.src-plantuml:before { content: 'Plantuml'; }
+          pre.src-processing:before { content: 'Processing.js'; }
+          pre.src-python:before { content: 'Python'; }
+          pre.src-R:before { content: 'R'; }
+          pre.src-ruby:before { content: 'Ruby'; }
+          pre.src-sass:before { content: 'Sass'; }
+          pre.src-scheme:before { content: 'Scheme'; }
+          pre.src-screen:before { content: 'Gnu Screen'; }
+          pre.src-sed:before { content: 'Sed'; }
+          pre.src-sh:before { content: 'shell'; }
+          pre.src-sql:before { content: 'SQL'; }
+          pre.src-sqlite:before { content: 'SQLite'; }
+          /* additional languages in org.el's org-babel-load-languages alist */
+          pre.src-forth:before { content: 'Forth'; }
+          pre.src-io:before { content: 'IO'; }
+          pre.src-J:before { content: 'J'; }
+          pre.src-makefile:before { content: 'Makefile'; }
+          pre.src-maxima:before { content: 'Maxima'; }
+          pre.src-perl:before { content: 'Perl'; }
+          pre.src-picolisp:before { content: 'Pico Lisp'; }
+          pre.src-scala:before { content: 'Scala'; }
+          pre.src-shell:before { content: 'Shell Script'; }
+          pre.src-ebnf2ps:before { content: 'ebfn2ps'; }
+          /* additional language identifiers per "defun org-babel-execute"
+               in ob-*.el */
+          pre.src-cpp:before  { content: 'C++'; }
+          pre.src-abc:before  { content: 'ABC'; }
+          pre.src-coq:before  { content: 'Coq'; }
+          pre.src-groovy:before  { content: 'Groovy'; }
+          /* additional language identifiers from org-babel-shell-names in
+             ob-shell.el: ob-shell is the only babel language using a lambda to put
+             the execution function name together. */
+          pre.src-bash:before  { content: 'bash'; }
+          pre.src-csh:before  { content: 'csh'; }
+          pre.src-ash:before  { content: 'ash'; }
+          pre.src-dash:before  { content: 'dash'; }
+          pre.src-ksh:before  { content: 'ksh'; }
+          pre.src-mksh:before  { content: 'mksh'; }
+          pre.src-posh:before  { content: 'posh'; }
+          /* Additional Emacs modes also supported by the LaTeX listings package */
+          pre.src-ada:before { content: 'Ada'; }
+          pre.src-asm:before { content: 'Assembler'; }
+          pre.src-caml:before { content: 'Caml'; }
+          pre.src-delphi:before { content: 'Delphi'; }
+          pre.src-html:before { content: 'HTML'; }
+          pre.src-idl:before { content: 'IDL'; }
+          pre.src-mercury:before { content: 'Mercury'; }
+          pre.src-metapost:before { content: 'MetaPost'; }
+          pre.src-modula-2:before { content: 'Modula-2'; }
+          pre.src-pascal:before { content: 'Pascal'; }
+          pre.src-ps:before { content: 'PostScript'; }
+          pre.src-prolog:before { content: 'Prolog'; }
+          pre.src-simula:before { content: 'Simula'; }
+          pre.src-tcl:before { content: 'tcl'; }
+          pre.src-tex:before { content: 'TeX'; }
+          pre.src-plain-tex:before { content: 'Plain TeX'; }
+          pre.src-verilog:before { content: 'Verilog'; }
+          pre.src-vhdl:before { content: 'VHDL'; }
+          pre.src-xml:before { content: 'XML'; }
+          pre.src-nxml:before { content: 'XML'; }
+          /* add a generic configuration mode; LaTeX export needs an additional
+             (add-to-list 'org-latex-listings-langs '(conf " ")) in .emacs */
+          pre.src-conf:before { content: 'Configuration File'; }
+
+          table { border-collapse:collapse; }
+          caption.t-above { caption-side: top; }
+          caption.t-bottom { caption-side: bottom; }
+          td, th { vertical-align:top;  }
+          th.org-right  { text-align: center;  }
+          th.org-left   { text-align: center;   }
+          th.org-center { text-align: center; }
+          td.org-right  { text-align: right;  }
+          td.org-left   { text-align: left;   }
+          td.org-center { text-align: center; }
+          dt { font-weight: bold; }
+          .footpara { display: inline; }
+          .footdef  { margin-bottom: 1em; }
+          .figure { padding: 1em; }
+          .figure p { text-align: center; }
+          .equation-container {
+            display: table;
+            text-align: center;
+            width: 100%;
+          }
+          .equation {
+            vertical-align: middle;
+          }
+          .equation-label {
+            display: table-cell;
+            text-align: right;
+            vertical-align: middle;
+          }
+          .inlinetask {
+            padding: 10px;
+            border: 2px solid gray;
+            margin: 10px;
+            background: #ffffcc;
+          }
+          #org-div-home-and-up
+           { text-align: right; font-size: 70%; white-space: nowrap; }
+          textarea { overflow-x: auto; }
+          .linenr { font-size: smaller }
+          .code-highlighted { background-color: #ffff00; }
+          .org-info-js_info-navigation { border-style: none; }
+          #org-info-js_console-label
+            { font-size: 10px; font-weight: bold; white-space: nowrap; }
+          .org-info-js_search-highlight
+            { background-color: #ffff00; color: #000000; font-weight: bold; }
+          .org-svg { }
+        </style>
+
+        <script>
+          window.MathJax = {
+            tex: {
+              ams: {
+                multlineWidth: '85%'
+              },
+              tags: 'ams',
+              tagSide: 'right',
+              tagIndent: '.8em'
+            },
+            chtml: {
+              scale: 1.0,
+              displayAlign: 'center',
+              displayIndent: '0em'
+            },
+            svg: {
+              scale: 1.0,
+              displayAlign: 'center',
+              displayIndent: '0em'
+            },
+            output: {
+              font: 'mathjax-modern',
+              displayOverflow: 'overflow'
+            }
+          };
+        </script>
+
+        <script
+          id="MathJax-script"
+          async
+          src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js">
+        </script>
+</head>
+
+<body id="index" class="home">
+        <header id="banner" class="body">
+                <nav><ul>
+                    <li><a href="/">首页</a></li>
+                    <li><a href="/categories.html">分类</a></li>
+                    <li><a href="/tags.html">标签</a></li>
+                    <li><a href="/archives.html">归档</a></li>
+                    <li><a href="https://github.com/azjf">关于</a></li>
+                </ul></nav>
+        </header><!-- /#banner -->
+<section id="content" class="body">
+  <article>
+    <header>
+      <h1 class="entry-title">
+        <a href="/cpp_memory_order_singleton.html" rel="bookmark"
+           title="Permalink to 浅谈C++ Memory Order - 从Singleton说起">浅谈C++ Memory Order - 从Singleton说起</a></h1>
+    </header>
+
+    <div class="entry-content">
+<footer class="post-info">
+        <abbr class="published" title="2026-01-18T00:00:00+08:00">
+                2026-01-18
+        </abbr>
+<p>分类: <a href="/category/c.html">C++</a></p>
+标签: <a href="/tag/memory-order.html">Memory Order</a> <a href="/tag/fence.html">Fence</a> <a href="/tag/barrier.html">Barrier</a> <a href="/tag/lock-free.html">Lock-Free</a> <a href="/tag/concurrency.html">Concurrency</a> <a href="/tag/singleton.html">Singleton</a> <a href="/tag/nei-cun-shun-xu.html">内存顺序</a> <a href="/tag/nei-cun-ping-zhang.html">内存屏障</a> <a href="/tag/wu-suo.html">无锁</a> <a href="/tag/bing-fa.html">并发</a> <a href="/tag/dan-li.html">单例</a> 
+</footer><!-- /.post-info -->      <div id="table-of-contents" role="doc-toc">
+
+<div id="text-table-of-contents" role="doc-toc">
+<ul>
+<li><a href="#org2591d1c">1. 前言</a></li>
+<li><a href="#org4889436">2. C++ 11 Memory Order简介</a>
+<ul>
+<li><a href="#org9ae29ff">2.1. Relaxed内存顺序</a></li>
+<li><a href="#org4bef6cd">2.2. Acquire-Release内存顺序</a></li>
+<li><a href="#org7077e44">2.3. Sequential Consistency内存顺序</a></li>
+</ul>
+</li>
+<li><a href="#orgdd1673e">3. Singleton实现</a>
+<ul>
+<li><a href="#org4c8dcb6">3.1. DLCP实现方法</a></li>
+<li><a href="#org55da4bc">3.2. Static Initializer实现方法</a></li>
+</ul>
+</li>
+<li><a href="#orgce1fb61">4. 参考文档</a></li>
+</ul>
+</div>
+</div>
+<div id="outline-container-org2591d1c" class="outline-2">
+<h2 id="org2591d1c"><span class="section-number-2">1.</span> 前言</h2>
+<div class="outline-text-2" id="text-1">
+<p>
+C++ 11之前是没有线程内存访问模型的，因此无法正确地原生地通过double-checked locking pattern (DCLP)来实现singleton，具体原因可见Scott Meyers的文章<a href="http://www.aristeia.com/Papers/DDJ_Jul_Aug_2004_revised.pdf">C++ and the Perils of Double-Checked Locking</a>.
+因此，为了通过DCLP来实现singleton, C++ 11之前只能采用pthread或直接调用平台相关汇编指令等不可跨平台移植的方式。
+</p>
+
+<p>
+C++ 11建立了线程内存访问模型，从此之后我们可以通过原生C++来可移植地实现singleton.
+由于singleton的实现方式依赖内存访问模型，因此本文先将对其做简要介绍，然后再详解其在singleton实现中的作用。
+</p>
+</div>
+</div>
+<div id="outline-container-org4889436" class="outline-2">
+<h2 id="org4889436"><span class="section-number-2">2.</span> C++ 11 Memory Order简介</h2>
+<div class="outline-text-2" id="text-2">
+<p>
+对于多核系统的多线程程序，如果不做同步处理，每个线程看到的内存内容可能是不同的，原因如下：
+</p>
+<ol class="org-ol">
+<li>CPU和编译器为了性能一般会重排指令，而指令重排的唯一限制是​<b>不影响单线程语义（AS-IF准则）</b>​，因此可能会影响多线程语义；</li>
+<li>对于多核CPU，每个核都有自己的L1/L2缓存，而这些缓存内容不一定和主内存同步，各核的缓存之间一般也不同步。</li>
+</ol>
+<p>
+因此，如果不加内存顺序约束的话，某个线程将无法以正确的顺序看到别的线程的内存改动而出错。
+比如，在singleton场景下，线程A构造了对象后再设置instance指针，线程B却可能先看到instance指针而后看到构造好的对象内存。
+</p>
+
+<p>
+为了解决这个问题，CPU一般会提供多种内存屏障fence/barrier来约束CPU指令重排行为。
+不同架构的CPU提供的默认内存顺序保障一般是不同的，提供的内存屏障类型一般也不相同。
+C++对不同CPU内存屏障做了一个抽象，其能够描述目前市面上所以的CPU类型的内存顺序行为。
+</p>
+
+<p>
+从逻辑上将，内存屏障可以被分为<a href="https://preshing.com/20120710/memory-barriers-are-like-source-control-operations/">四类</a>，如下：
+</p>
+
+<div id="orge13e351" class="figure">
+<p><img src="https://github.com/azjf/azjf.github.io/raw/main/img/FB/5C231C-25E6-481B-B06C-84755FEA45EF/memory_fence_type.png" alt="memory_fence_type.png" width="400px" />
+</p>
+</div>
+
+<p>
+其中，LoadLoad禁止Load间重排，StoreStore/LoadStore/StoreLoad也类似。
+C++根据这些barrier的使用习惯抽象出来了三类内存顺序：
+</p>
+<ol class="org-ol">
+<li>relaxed: 不使用内存屏障，没有内存顺序约束</li>
+<li>acquire-release: LoadLoad/LoadStore合在一起构成了acquire fence, StoreStore/LoadStore合在一起构成了release fence；</li>
+<li>sequential consistency (seq-cst): StoreLoad fence要求某个核store后能被所有核load时看见，因此本质上是全局一致性顺序。</li>
+</ol>
+<p>
+接下来，本节将对这三类内存顺序做简要介绍。
+</p>
+</div>
+<div id="outline-container-org9ae29ff" class="outline-3">
+<h3 id="org9ae29ff"><span class="section-number-3">2.1.</span> Relaxed内存顺序</h3>
+<div class="outline-text-3" id="text-2-1">
+<p>
+Cpprefence对relaxed顺序（memory<sub>order</sub><sub>relaxed</sub>）的原文描述是"there are no synchronization or ordering constraints imposed on other reads or writes, only this operation's atomicity is guaranteed".
+也就是说，relaxed顺序不对内存访问做任何限制，对原子变量而已也仅保证原子性，也就是其它线程不会看到中间态。
+因此，仅使用relaxed顺序会导致前面描述过的不同线程将看到不同内存内容的问题。
+</p>
+</div>
+</div>
+<div id="outline-container-org4bef6cd" class="outline-3">
+<h3 id="org4bef6cd"><span class="section-number-3">2.2.</span> Acquire-Release内存顺序</h3>
+<div class="outline-text-3" id="text-2-2">
+<p>
+Acquire-release内存顺序可以被认为是​<b>通过轻量级fence来同步两个线程</b>​，前面的relaxed内存顺序不加任何同步，而下一小节要介绍的sequential consistency顺序则会​<b>通过重量级fence来同步所有线程</b>​。
+</p>
+
+<p>
+Acquire和release fence会绑定fence之后的第一个load/store指令, 其会强制CPU在执行fence后的第一个load/store指令之前先commit掉前面所有的load/store指令。
+具体而言：
+</p>
+<ol class="org-ol">
+<li>Load-Acquire fence本质上是LoadLoad/LoadStore fence, 其会​<b>绑定fence后的第一个load (LoadLoad) / store (LoadStore)指令, 使得下次load/store时作为一个batch commit掉前面所有的load</b>​, 从而​<span class="underline">使得fence前的load不能跨越fence后的第一个load/store, 并且还会再根据前一个load的batch信息来刷新当前thread中早于该batch的相关cache</span>​, 进而确保被load的payload值的至少和guard值一样新鲜.
+Load-Acquire的cppreference定义为"A load operation with this memory order performs the acquire operation on the affected memory location: no reads or writes in the current thread can be reordered before this load. All writes in other threads that release the same atomic variable are visible in the current thread (see Release-Acquire ordering below).", 可以看出其目的为通过限制指令重排而确保store可见性。
+例如，thread2 load payload前先根据guard变量的batch信息来刷新和thread2 cache相关的其它thread1 store (个人理解是通过将thread2 cache中和thread1其它store相关的内存标记为expired来实现的), 从而​<b>将thread内happen-before关系拓展到thread间</b>​。需要注意的是，thread2 cache刷新在load而不是store中做，否则得刷新所有相关thread, 而seq-cst用的重量级fence则是在store时刷新所有其它thread cache.
+若无acquire fence来将happen-before关系拓展到thread间，对于thread1 A -&gt; thread1 B1和thread2 B2 -&gt; thread2 C的操作顺序, 即使thread1 B1先于thread2 B2, 系统也并不能保证thread1 A happen-before thread2 C.</li>
+<li>Store-Release fence本质上是StoreStore/LoadStore fence, 其会​<b>绑定fence后面第一个store (StoreStore/LoadStore)，使得下次store时作为一个batch commit掉前面的store/load</b>​, 从而​<span class="underline">使得fence前的store/load不能跨越fence后的第一个store</span>​, 进而确保payload store时间不会晚于guard store.
+Store-Release fence的cpprefernce定义为"A store operation with this memory order performs the release operation: no reads or writes in the current thread can be reordered after this store. All writes in the current thread are visible in other threads that acquire the same atomic variable (see Release-Acquire ordering below) and writes that carry a dependency into the atomic variable become visible in other threads that consume the same atomic (see Release-Consume ordering below).", 可以看出其目的也是通过限制指令重排而确保store可见性。</li>
+</ol>
+
+
+
+
+
+<p>
+​<b>Acquire和release fence都带有LoadStore fence</b>​, 其目的是方便mutex等组件可以将临界区的读写操作限制在mutex lock和unlock间。
+具体而言，mutex lock使用了acquire fence, 而mutex unlock使用了release fence.
+若acquire和release fence未带有LoadStore fence, 那么临界区的store可以被重排到mutex lock之前，而临界区的load可以被重排到mutex unlock()后，而这显然不能达到的mutex保护临界区的目标。
+</p>
+
+<p>
+此外，C++还有std::memory<sub>order</sub><sub>acq</sub><sub>rel内存顺序</sub>，其同时使用了load-acquire和store-release fence, 其只能被用于read-modify-write (RMW)操作，本质上是进行acquire fence + RMW + release fence操作。
+acq<sub>rel内存顺序的cpprefence对定义为</sub>"A read-modify-write operation with this memory order is both an acquire operation and a release operation. No memory reads or writes in the current thread can be reordered before the load, nor after the store. All writes in other threads that release the same atomic variable are visible before the modification and the modification is visible in other threads that acquire the same atomic variable.",
+</p>
+
+<p>
+最后，C++还有一个memory<sub>order</sub><sub>consume内存顺序</sub>，其可被看着弱化版的load-acquire fence。其对指令重排的约束比load-acquire fence弱. consume fence会​<b>在执行ptr-&gt;i前先刷新ptr-&gt;i内存以确保ptr-&gt;i比ptr新</b>​。
+Consume内存顺序的cpprefence定义为"A load operation with this memory order performs a consume operation on the affected memory location: no reads or writes in the current thread dependent on the value currently loaded can be reordered before this load. Writes to data-dependent variables in other threads that release the same atomic variable are visible in the current thread. On most platforms, this affects compiler optimizations only (see Release-Consume ordering below).", 可以看出其目的也是通过限制指令重排而确保store可见性。
+例如，Acquire fence会刷新thread2 cache中和thread1 flag store相关的所有cache, 而consume则是按​<b>根据依赖关系需刷新cache</b>​。
+</p>
+</div>
+</div>
+<div id="outline-container-org7077e44" class="outline-3">
+<h3 id="org7077e44"><span class="section-number-3">2.3.</span> Sequential Consistency内存顺序</h3>
+<div class="outline-text-3" id="text-2-3">
+<p>
+Cpprefence对sequential consistency顺序（memory<sub>order</sub><sub>seq</sub><sub>cst</sub>）的原文描述是"A load operation with this memory order performs an acquire operation, a store performs a release operation, and read-modify-write performs both an acquire operation and a release operation, plus a single total order exists in which all threads observe all modifications in the same order".
+也就是说，seq-cst顺序可以让所有线程都看到一致的内存变化，而这本质上是用了StoreLoad这个重量级fence。
+StoreLoad fence会​<b>主动将其它所有CPU核心中和前面store相关的cache都标记为expired</b>​ (而acquire/releaes fence仅在load时被动地刷新当前线程的相关cache), 从而使得所有CPU core都看到一致(consistency)的共享内存，从而退化为顺序(sequentially)执行。
+</p>
+
+<p>
+X86可以通过lock add/xadd/xchg/cmpxchg这种RMW之类来实现StoreLoad fence, 而RMW从语义上会穿透CPU core cache来直接操作主内存（否则若各个线程将看到各自cpu core cache中不同的RMW obj）。
+理论上，RMW从语义上可以通过仅刷新当前RMW obj对应的cache来实现穿透CPU core cache, 而没必要按照seq-cst/StoreLoad fence要求的那样会刷新其它所有相关cache以使得各个线程会看到一致内存，因此StoreLoad fence对RMW来说其实是overskilled的。
+换句话来说，RMW本身从逻辑上无需像StoreLoad fence那样来维持seq-cst order, StoreLoad fence爷仅是实现RMW的overskilled方案之一。
+另外，当多个线程通过RMW来修改同一个原子变量时，RMW从语义上会​<b>强制CPU在硬件层面上对这些线程进行序列化</b>​（而不是mutex这种OS层面上）以串行地执行对该原子变量的modify动作（虽然在OS层面上这些线程并行的）。
+此外，当多个原子变量共享缓存行cache line时，多个线程对不同原子变量的并发RMW也将因cache pingpong而被迫在硬件层面上被序列化而恶化系统性能（false-sharing问题），其可以通过使用alignas(<a href="https://en.cppreference.com/cpp/thread/hardware_destructive_interference_size">hardware<sub>destructive</sub><sub>interference</sub><sub>size</sub></a>)分隔这些原子变量来解决。
+</p>
+</div>
+</div>
+</div>
+<div id="outline-container-orgdd1673e" class="outline-2">
+<h2 id="orgdd1673e"><span class="section-number-2">3.</span> Singleton实现</h2>
+<div class="outline-text-2" id="text-3">
+<p>
+Singleton的实现方式有两种，第一种是使用acquire/consume-release内存顺序的DLCP, 第二种是底层一般会依赖DLCP的Static Initializer语法糖。
+</p>
+</div>
+<div id="outline-container-org4c8dcb6" class="outline-3">
+<h3 id="org4c8dcb6"><span class="section-number-3">3.1.</span> DLCP实现方法</h3>
+<div class="outline-text-3" id="text-3-1">
+<p>
+C++ 11之后我们可以采用标准库而无需依赖三方库地通过DCLP实现singleton, 代码如下：
+</p>
+<div class="org-src-container">
+<pre class="src src-c++"><span style="font-weight: bold; text-decoration: underline;">std</span>::<span style="font-weight: bold; text-decoration: underline;">atomic</span>&lt;<span style="font-weight: bold; text-decoration: underline;">Singleton</span>*&gt; <span style="font-weight: bold; text-decoration: underline;">Singleton</span>::<span style="font-weight: bold; font-style: italic;">m_instance</span>;
+<span style="font-weight: bold; text-decoration: underline;">std</span>::<span style="font-weight: bold; text-decoration: underline;">mutex</span> <span style="font-weight: bold; text-decoration: underline;">Singleton</span>::<span style="font-weight: bold; font-style: italic;">m_mutex</span>;
+
+<span style="font-weight: bold; text-decoration: underline;">Singleton</span>* <span style="font-weight: bold; text-decoration: underline;">Singleton</span>::<span style="font-weight: bold;">getInstance</span>() {
+    <span style="font-weight: bold; text-decoration: underline;">Singleton</span>* <span style="font-weight: bold; font-style: italic;">tmp</span> = m_instance.load(<span style="font-weight: bold; text-decoration: underline;">std</span>::memory_order_acquire); <span style="font-weight: bold; font-style: italic;">// </span><span style="font-weight: bold; font-style: italic;">1.1, threadA</span>
+    <span style="font-weight: bold; font-style: italic;">// </span><span style="font-weight: bold; font-style: italic;">Singleton* tmp = m_instance.load(std::memory_order_relaxed); std::atomic_thread_fence(std::memory_order_acquire); // 1.2</span>
+    <span style="font-weight: bold; font-style: italic;">// </span><span style="font-weight: bold; font-style: italic;">Singleton* tmp = m_instance.load(std::memory_order_consume); // 1.3.1</span>
+    <span style="font-weight: bold; font-style: italic;">// </span><span style="font-weight: bold; font-style: italic;">Singleton* tmp = m_instance.load(std::memory_order_relaxed); std::atomic_thread_fence(std::memory_order_consume); // 1.3.2</span>
+    <span style="font-weight: bold;">if</span> (tmp == <span style="font-weight: bold; text-decoration: underline;">nullptr</span>) {
+        <span style="font-weight: bold; text-decoration: underline;">std</span>::<span style="font-weight: bold; text-decoration: underline;">lock_guard</span>&lt;<span style="font-weight: bold; text-decoration: underline;">std</span>::<span style="font-weight: bold; text-decoration: underline;">mutex</span>&gt; <span style="font-weight: bold; font-style: italic;">lock</span>(m_mutex);
+        tmp = m_instance.load(<span style="font-weight: bold; text-decoration: underline;">std</span>::memory_order_relaxed); <span style="font-weight: bold; font-style: italic;">// </span><span style="font-weight: bold; font-style: italic;">2</span>
+        <span style="font-weight: bold;">if</span> (tmp == <span style="font-weight: bold; text-decoration: underline;">nullptr</span>) {
+            tmp = <span style="font-weight: bold;">new</span> <span style="font-weight: bold; text-decoration: underline;">Singleton</span>;
+            m_instance.store(tmp, <span style="font-weight: bold; text-decoration: underline;">std</span>::memory_order_release); <span style="font-weight: bold; font-style: italic;">// </span><span style="font-weight: bold; font-style: italic;">3.1, threadB</span>
+            <span style="font-weight: bold; font-style: italic;">// </span><span style="font-weight: bold; font-style: italic;">std::atomic_thread_fence(std::memory_order_release); m_instance.store(tmp, std::memory_order_relaxed); // 3.2</span>
+        }
+    }
+    <span style="font-weight: bold;">return</span> tmp;
+}
+</pre>
+</div>
+<p>
+Acquire fence和release fence需要配套使用才能形成​<b>synchronizes-with关系</b>​而将​<b>happen-before关系</b>​拓展到线程间以实现线程间内存同步，原因如下：
+</p>
+<ol class="org-ol">
+<li>如果在1处不使用acquire fence，那么即使threadA在1处拿到了threadB在3处store的singleton指针，threadA可能也无法看到该指针指向的对象内存，因为此时该对象内存内容可能还没有从threadB的cache中传递过来。</li>
+<li>如果在3处不使用release fence, 那么threadB可能在Singleton CTOR执行完成之前对m<sub>instance赋值</sub>，进而导致threadA看到所指对象尚未被完全构造的m<sub>instance指针</sub>。
+而这根本原因是在单线程模型中，Singleton构造和m<sub>instance</sub> store是完全没有依赖关系的，因此CPU和编译器都可以这两者进行重排，而release fence可以避免这种重排。</li>
+</ol>
+
+<p>
+1.2/3.2被注释代码中单独使用acquire/release fence的效果和1.1/3.1使用的带内存顺序的load/store效果一样，但是在某些架构下生成的汇编代码可能会不一样。
+例如，ARMv8的ldar/stlr指令可以直接实现1.1/3.1, 而不是使用1.2/3.2对应的单独fence指令。
+</p>
+
+<p>
+另外，对于singleton这种依赖指针来操作对象的做法，1.1/1.2处代码可以被替换为1.3.1/1.3.2，也就是将acquire order替换成consume order，这样做的好处时对于arm这种默认保持consume order的架构可以使用更轻量的汇编指令而提升运行效率。
+</p>
+
+<p>
+最后，代码中2处无需使用任何fence的原因是threadB mutex unlock()和会threadA mutex lock()同步，而这是C++标准保证的，具体可参考CCIA 5.3.7.
+</p>
+</div>
+</div>
+<div id="outline-container-org55da4bc" class="outline-3">
+<h3 id="org55da4bc"><span class="section-number-3">3.2.</span> Static Initializer实现方法</h3>
+<div class="outline-text-3" id="text-3-2">
+<p>
+C++ 11规定局部静态变量初始化是线程安全的，因此可以如下代码来实现单例：
+</p>
+<div class="org-src-container">
+<pre class="src src-c++"><span style="font-weight: bold; text-decoration: underline;">Singleton</span>&amp; <span style="font-weight: bold; text-decoration: underline;">Singleton</span>::<span style="font-weight: bold;">getInstance</span>() {
+    <span style="font-weight: bold;">static</span> <span style="font-weight: bold; text-decoration: underline;">Singleton</span> <span style="font-weight: bold; font-style: italic;">instance</span>;
+    <span style="font-weight: bold;">return</span> instance;
+}
+</pre>
+</div>
+<p>
+虽然C++标准没做具体规定如何实现这种语义，GCC等编译器在底层其实还是会用DCLP方式来实现之，因此这其实是一种语法糖。
+</p>
+</div>
+</div>
+</div>
+<div id="outline-container-orgce1fb61" class="outline-2">
+<h2 id="orgce1fb61"><span class="section-number-2">4.</span> 参考文档</h2>
+<div class="outline-text-2" id="text-4">
+<ol class="org-ol">
+<li>C++ Concurrency in Action, 2nd Edition: Chapter 5 - The C++ Memory Model and Operations on Atomic Types</li>
+<li><a href="https://preshing.com/20130930/double-checked-locking-is-fixed-in-cpp11/">https://preshing.com/20130930/double-checked-locking-is-fixed-in-cpp11/</a></li>
+<li><a href="https://preshing.com/20120930/weak-vs-strong-memory-models/">https://preshing.com/20120930/weak-vs-strong-memory-models/</a></li>
+<li><a href="https://preshing.com/20120710/memory-barriers-are-like-source-control-operations/">https://preshing.com/20120710/memory-barriers-are-like-source-control-operations/</a></li>
+<li><a href="https://en.cppreference.com/cpp/atomic/memory_order">https://en.cppreference.com/cpp/atomic/memory_order</a></li>
+<li><a href="https://en.cppreference.com/cpp/atomic/atomic_thread_fence">https://en.cppreference.com/cpp/atomic/atomic_thread_fence</a></li>
+<li><a href="https://www.kernel.org/doc/Documentation/memory-barriers.txt">https://www.kernel.org/doc/Documentation/memory-barriers.txt</a></li>
+</ol>
+</div>
+</div>
+
+    </div><!-- /.entry-content -->
+
+  </article>
+</section>
+        <section id="extras" class="body">
+        </section><!-- /#extras -->
+
+</body>
+</html>

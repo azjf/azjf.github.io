@@ -256,11 +256,11 @@
 
 <div id="text-table-of-contents" role="doc-toc">
 <ul>
-<li><a href="#org5d9f6eb">1. 窗口布局</a></li>
-<li><a href="#orgfa4af53">2. 快捷键</a>
+<li><a href="#org66d3a08">1. 窗口布局</a></li>
+<li><a href="#org3243096">2. 快捷键</a>
 <ul>
-<li><a href="#org267656a">2.1. 开始或结束调试 (my-gud-run-cont)</a></li>
-<li><a href="#org79f1419">2.2. Toggle断点 (my-gud-toggle-breakpoint)</a></li>
+<li><a href="#org19aa1e9">2.1. 开始或结束调试 (my-gud-run-cont)</a></li>
+<li><a href="#org6068243">2.2. Toggle断点 (my-gud-toggle-breakpoint)</a></li>
 </ul>
 </li>
 </ul>
@@ -276,8 +276,8 @@
 本文接下来将介绍Emacs GDB的配置方法，包括调试相关的各个buffer布局，以及调试状态下的快捷键配置。
 在继续阅读本文之前，建议先阅读<a href="https://zhuanlan.zhihu.com/p/32843449">终端调试哪家强？</a>以了解Emacs GDB的基础用法。
 </p>
-<div id="outline-container-org5d9f6eb" class="outline-2">
-<h2 id="org5d9f6eb"><span class="section-number-2">1.</span> 窗口布局</h2>
+<div id="outline-container-org66d3a08" class="outline-2">
+<h2 id="org66d3a08"><span class="section-number-2">1.</span> 窗口布局</h2>
 <div class="outline-text-2" id="text-1">
 <p>
 使用M-x gdb进入调试状态后，默认情况下只有一个gdb cmdline窗口，而这通常不能满足调试需求。
@@ -306,40 +306,39 @@ Emacs是通过<a href="https://github.com/emacs-mirror/emacs/blob/emacs-29.1/lis
   (set-window-dedicated-p (selected-window) nil)
   (switch-to-buffer gud-comint-buffer)
   (delete-other-windows)
-  (<span style="font-weight: bold;">let*</span> ((win11 (selected-window))
-        (win31 (split-window nil (/ (* (window-height) 3) 4)))
-        (win21 (split-window nil (/ (window-height) 3))))
+  (<span style="font-weight: bold;">let*</span> ((w11 (selected-window))
+        (w31 (split-window w11 (/ (* (window-height w11) 3) 4) 'down))
+        (w21 (split-window w11 (/ (window-height w11) 3) 'down)))
     <span style="font-weight: bold; font-style: italic;">;; </span><span style="font-weight: bold; font-style: italic;">1</span>
-    (<span style="font-weight: bold;">let*</span> ((win13 (split-window-right nil win11))
-          (win12 (split-window-right (/ (* (window-width) 2) 3) win11)))
-      (gdb-set-window-buffer (gdb-get-buffer-create 'gdb-inferior-io) nil win12)
-      (gdb-set-window-buffer (gdb-locals-buffer-name) nil win13))
+    (<span style="font-weight: bold;">let*</span> ((w13 (split-window w11 nil 'right))
+          (w12 (split-window w11 (/ (window-width w11) 3) 'right)))
+      (gdb-set-window-buffer (gdb-get-buffer-create 'gdb-threads-buffer) nil w11)
+      (gdb-set-window-buffer (gdb-get-buffer-create 'gdb-memory-buffer) nil w12)
+      (gdb-set-window-buffer (gdb-locals-buffer-name) nil w13))
     <span style="font-weight: bold; font-style: italic;">;; </span><span style="font-weight: bold; font-style: italic;">2</span>
-    (select-window win21)
-    (set-window-buffer win21 (<span style="font-weight: bold;">or</span> (gdb-get-source-buffer) (list-buffers-noselect)))
-    (<span style="font-weight: bold;">setq</span> gdb-source-window-list (list (selected-window)))
-    (<span style="font-weight: bold;">let*</span> ((win22 (split-window-right nil win21))
-          (win23 (split-window-right (/ (* (window-width) 3) 4) win22)))
-      (gdb-set-window-buffer (gdb-get-buffer-create 'gdb-disassembly-buffer) nil win22)
-      (gdb-set-window-buffer (gdb-get-buffer-create 'gdb-registers-buffer) nil win23))
+    (<span style="font-weight: bold;">let*</span> ((w22 (split-window w21 nil 'right))
+          (w23 (split-window w22 (/ (* (window-width w22) 3) 4) 'right)))
+      (set-window-buffer w21 (<span style="font-weight: bold;">or</span> (gdb-get-source-buffer) (list-buffers-noselect)))
+      (<span style="font-weight: bold;">setq</span> gdb-source-window-list (list w21))
+      (gdb-set-window-buffer (gdb-get-buffer-create 'gdb-disassembly-buffer) nil w22)
+      (gdb-set-window-buffer (gdb-get-buffer-create 'gdb-registers-buffer) nil w23))
     <span style="font-weight: bold; font-style: italic;">;; </span><span style="font-weight: bold; font-style: italic;">3</span>
-    (select-window win31)
-    (gdb-set-window-buffer (gdb-stack-buffer-name))
-    (<span style="font-weight: bold;">let</span> ((win32 (split-window-right)))
-      (gdb-set-window-buffer (gdb-get-buffer-create 'gdb-memory-buffer) nil win32))
+    (<span style="font-weight: bold;">let</span> ((w32 (split-window w31 nil 'right)))
+      (gdb-set-window-buffer gud-comint-buffer nil w31)
+      (gdb-set-window-buffer (gdb-stack-buffer-name) nil w32))
     <span style="font-weight: bold; font-style: italic;">;;</span>
-    (select-window win21)))
+    (select-window w21)))
 </pre>
 </div>
 
-<div id="org374ec78" class="figure">
+<div id="org23cf3ff" class="figure">
 <p><img src="https://github.com/azjf/azjf.github.io/raw/main/img/38/3773BC-4D2F-4F87-9F24-D797DCAD5DB8/2025-03-18_22-10-35_screenshot.png" alt="2025-03-18_22-10-35_screenshot.png" />
 </p>
 </div>
 </div>
 </div>
-<div id="outline-container-orgfa4af53" class="outline-2">
-<h2 id="orgfa4af53"><span class="section-number-2">2.</span> 快捷键</h2>
+<div id="outline-container-org3243096" class="outline-2">
+<h2 id="org3243096"><span class="section-number-2">2.</span> 快捷键</h2>
 <div class="outline-text-2" id="text-2">
 <p>
 Emacs通过gud mode来支持GDB, gud mode提供了很多调试相关命令，而这些命令可以通过定制gud-minor-mode-map以被绑定到快捷键上。
@@ -410,8 +409,8 @@ GUD mode默认没有提供“开始或结束调试”命令和“toggle断点”
 所幸这两个命令都可以被实现，下面将给出这两个命令的一种实现方法。
 </p>
 </div>
-<div id="outline-container-org267656a" class="outline-3">
-<h3 id="org267656a"><span class="section-number-3">2.1.</span> 开始或结束调试 (my-gud-run-cont)</h3>
+<div id="outline-container-org19aa1e9" class="outline-3">
+<h3 id="org19aa1e9"><span class="section-number-3">2.1.</span> 开始或结束调试 (my-gud-run-cont)</h3>
 <div class="outline-text-3" id="text-2-1">
 <p>
 gdb-inferior-status变量可以被用来判断当前是否处于调试状态，可以基于其实现本命令，代码如下：
@@ -426,8 +425,8 @@ gdb-inferior-status变量可以被用来判断当前是否处于调试状态，�
 </div>
 </div>
 </div>
-<div id="outline-container-org79f1419" class="outline-3">
-<h3 id="org79f1419"><span class="section-number-3">2.2.</span> Toggle断点 (my-gud-toggle-breakpoint)</h3>
+<div id="outline-container-org6068243" class="outline-3">
+<h3 id="org6068243"><span class="section-number-3">2.2.</span> Toggle断点 (my-gud-toggle-breakpoint)</h3>
 <div class="outline-text-3" id="text-2-2">
 <p>
 若当前行具有断点，则行首字符的overlay属性中将具有断点信息。

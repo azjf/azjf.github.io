@@ -256,34 +256,34 @@
 
 <div id="text-table-of-contents" role="doc-toc">
 <ul>
-<li><a href="#org85bd5f9">1. Dispatcher问题背景与实现原理</a></li>
-<li><a href="#org5262962">2. 源码分析</a>
+<li><a href="#org62994f4">1. Dispatcher问题背景与实现原理</a></li>
+<li><a href="#org7d63423">2. 源码分析</a>
 <ul>
-<li><a href="#org7d89b92">2.1. DispatchKey和DispatchKeySet</a>
+<li><a href="#orge813abb">2.1. DispatchKey和DispatchKeySet</a>
 <ul>
-<li><a href="#orgb0bc76a">2.1.1. DispatchKey</a></li>
-<li><a href="#org0071457">2.1.2. DispatchKeySet</a></li>
+<li><a href="#orgb5ed0fd">2.1.1. DispatchKey</a></li>
+<li><a href="#org513c875">2.1.2. DispatchKeySet</a></li>
 </ul>
 </li>
-<li><a href="#org835d726">2.2. KernelFunction表与算子注册</a>
+<li><a href="#orgd094d31">2.2. KernelFunction表与算子注册</a>
 <ul>
-<li><a href="#orgde42f52">2.2.1. KernelFunction表相关数据结构</a></li>
-<li><a href="#org607ad19">2.2.2. 算子注册</a></li>
+<li><a href="#org8c0e3d7">2.2.1. KernelFunction表相关数据结构</a></li>
+<li><a href="#orgf0b8d01">2.2.2. 算子注册</a></li>
 </ul>
 </li>
-<li><a href="#org292202c">2.3. 运行时链路</a>
+<li><a href="#org109bd3b">2.3. 运行时链路</a>
 <ul>
-<li><a href="#org3595751">2.3.1. 查找OperatorHandle</a></li>
-<li><a href="#org665b4f2">2.3.2. 执行OperatorHandle</a></li>
-<li><a href="#orga74a529">2.3.3. 计算DispatchKeySet</a></li>
-<li><a href="#orga6943d6">2.3.4. 查找KernelFunction</a></li>
-<li><a href="#orgd5e90f4">2.3.5. 调用KernelFunction</a></li>
-<li><a href="#orge635d9b">2.3.6. redispatch</a></li>
+<li><a href="#org7e58ecf">2.3.1. 查找OperatorHandle</a></li>
+<li><a href="#org869906f">2.3.2. 执行OperatorHandle</a></li>
+<li><a href="#orge16e766">2.3.3. 计算DispatchKeySet</a></li>
+<li><a href="#org61cb07c">2.3.4. 查找KernelFunction</a></li>
+<li><a href="#org47cc74e">2.3.5. 调用KernelFunction</a></li>
+<li><a href="#orge71b119">2.3.6. redispatch</a></li>
 </ul>
 </li>
 </ul>
 </li>
-<li><a href="#org66ec463">3. 参考文档</a></li>
+<li><a href="#orgdc80aad">3. 参考文档</a></li>
 </ul>
 </div>
 </div>
@@ -291,8 +291,8 @@
 本文将先介绍PyTorch dispatcher实现原理，然后再浅析<a href="https://github.com/pytorch/pytorch/tree/v2.7.1">v2.7.1</a>版实现源码，希望能对大家有所帮助。
 在继续阅读下文之前，建议先阅读PyTorch核心开发者Edward Z. Yang的<a href="https://blog.ezyang.com/2020/09/lets-talk-about-the-pytorch-dispatcher/">Let’s talk about the PyTorch dispatcher</a>以对dispatcher核心原理有所认识, 本文原理部分也主要参考了这篇文章。
 </p>
-<div id="outline-container-org85bd5f9" class="outline-2">
-<h2 id="org85bd5f9"><span class="section-number-2">1.</span> Dispatcher问题背景与实现原理</h2>
+<div id="outline-container-org62994f4" class="outline-2">
+<h2 id="org62994f4"><span class="section-number-2">1.</span> Dispatcher问题背景与实现原理</h2>
 <div class="outline-text-2" id="text-1">
 <p>
 PyTorch目前可以在CPU/CUDA/FPGA等多种后端设备上支持上千个算子，并且随着时间发展，PyTorch还需要不断支持新设备和新算子。
@@ -305,7 +305,7 @@ Dispatcher要解决的需要同时支持新设备和算子的扩展问题在本�
 例如，在编译器领域，该<a href="https://craftinginterpreters.com/representing-code.html#the-expression-problem">问题</a>为如何高效地给<a href="https://craftinginterpreters.com/image/representing-code/table.png">下图</a>所示的表同时新增行和列。
 </p>
 
-<div id="org246dbba" class="figure">
+<div id="org6860ff6" class="figure">
 <p><img src="https://github.com/azjf/azjf.github.io/raw/main/img/71/9C0C82-8BA6-4173-8061-471AA0969F96/2025-07-06_13-53-17_table.png" alt="2025-07-06_13-53-17_table.png" width="500px" />
 </p>
 </div>
@@ -319,7 +319,7 @@ Dispatcher要解决的需要同时支持新设备和算子的扩展问题在本�
 在PyTorch中，本问题的表行索引为算子，列索引为DispatchKey (描述CPU/CUDA等设备后端，和Autograd/Tracing等PyTorch功能)，表格单元则为KernelFunction（某个算子为某个DispatchKey提供的功能实现），如<a href="https://blog.ezyang.com/img/pytorch-dispatcher/slide-14.png">下图</a>所示：
 </p>
 
-<div id="orga1eaa95" class="figure">
+<div id="org2ac4ff3" class="figure">
 <p><img src="https://github.com/azjf/azjf.github.io/raw/main/img/71/9C0C82-8BA6-4173-8061-471AA0969F96/2025-07-06_14-50-49_slide-14.png" alt="2025-07-06_14-50-49_slide-14.png" width="300px" />
 </p>
 </div>
@@ -333,7 +333,7 @@ Dispatcher对本问题的解法如下：
 然后，通过一个控制中枢来管理表中的所有KernelFunction，并在运行时综合考虑算子入参和thread local变量等各个因素（用DispatchKey来描述）来选取出一个KernelFunction来执行，如<a href="https://blog.ezyang.com/img/pytorch-dispatcher/slide-06.png">下图</a>所示：
 </p>
 
-<div id="org869f858" class="figure">
+<div id="org3a70090" class="figure">
 <p><img src="https://github.com/azjf/azjf.github.io/raw/main/img/71/9C0C82-8BA6-4173-8061-471AA0969F96/2025-07-06_14-53-44_slide-06.png" alt="2025-07-06_14-53-44_slide-06.png" width="300px" />
 </p>
 </div>
@@ -350,12 +350,12 @@ C++虚函数仅支持single-dispatch, 因此用C++解决本问题时需要使用
 </p>
 </div>
 </div>
-<div id="outline-container-org5262962" class="outline-2">
-<h2 id="org5262962"><span class="section-number-2">2.</span> 源码分析</h2>
+<div id="outline-container-org7d63423" class="outline-2">
+<h2 id="org7d63423"><span class="section-number-2">2.</span> 源码分析</h2>
 <div class="outline-text-2" id="text-2">
 </div>
-<div id="outline-container-org7d89b92" class="outline-3">
-<h3 id="org7d89b92"><span class="section-number-3">2.1.</span> DispatchKey和DispatchKeySet</h3>
+<div id="outline-container-orge813abb" class="outline-3">
+<h3 id="orge813abb"><span class="section-number-3">2.1.</span> DispatchKey和DispatchKeySet</h3>
 <div class="outline-text-3" id="text-2-1">
 <p>
 对于某个算子，其不止要适配CPU/CUDA/FPGA等设备后端，还需要适配Autograd/Tracing等PyTorch功能。
@@ -367,8 +367,8 @@ C++虚函数仅支持single-dispatch, 因此用C++解决本问题时需要使用
 ​<b>DispatchKey的功能为表达这些KernelFunction选取因素，而DispatchKeySet的功能则为综合多个DispatchKey并根据合成结果计算出KernelFunction表的列索引</b>​，下面将对两者进行详解。
 </p>
 </div>
-<div id="outline-container-orgb0bc76a" class="outline-4">
-<h4 id="orgb0bc76a"><span class="section-number-4">2.1.1.</span> DispatchKey</h4>
+<div id="outline-container-orgb5ed0fd" class="outline-4">
+<h4 id="orgb5ed0fd"><span class="section-number-4">2.1.1.</span> DispatchKey</h4>
 <div class="outline-text-4" id="text-2-1-1">
 <p>
 Dispatcher使用DispatchKey来表达这些KernelFunction选取因素的，其在实现上是一个uint16<sub>t枚举类</sub>，每一个KernelFunction选取因子都对于一个枚举项，如下：
@@ -424,8 +424,8 @@ Dispatcher使用DispatchKey来表达这些KernelFunction选取因素的，其在
 </p>
 </div>
 </div>
-<div id="outline-container-org0071457" class="outline-4">
-<h4 id="org0071457"><span class="section-number-4">2.1.2.</span> DispatchKeySet</h4>
+<div id="outline-container-org513c875" class="outline-4">
+<h4 id="org513c875"><span class="section-number-4">2.1.2.</span> DispatchKeySet</h4>
 <div class="outline-text-4" id="text-2-1-2">
 <p>
 DispatchKeySet的功能为​<b>综合多个DispatchKey (实现了multiple-dispatch)</b>​, 并根据合成结果计算出​<b>KernelFunction表的列索引</b>​。
@@ -573,12 +573,12 @@ DispatchKeySet的最终目的是计算KernelFunction表列索引，其由​<cod
 </div>
 </div>
 </div>
-<div id="outline-container-org835d726" class="outline-3">
-<h3 id="org835d726"><span class="section-number-3">2.2.</span> KernelFunction表与算子注册</h3>
+<div id="outline-container-orgd094d31" class="outline-3">
+<h3 id="orgd094d31"><span class="section-number-3">2.2.</span> KernelFunction表与算子注册</h3>
 <div class="outline-text-3" id="text-2-2">
 </div>
-<div id="outline-container-orgde42f52" class="outline-4">
-<h4 id="orgde42f52"><span class="section-number-4">2.2.1.</span> KernelFunction表相关数据结构</h4>
+<div id="outline-container-org8c0e3d7" class="outline-4">
+<h4 id="org8c0e3d7"><span class="section-number-4">2.2.1.</span> KernelFunction表相关数据结构</h4>
 <div class="outline-text-4" id="text-2-2-1">
 <p>
 KernelFunction表是一个二维表，行索引为算子，列索引为DispatchKey.
@@ -646,8 +646,8 @@ OperatorDef的定义如下：
 </p>
 </div>
 </div>
-<div id="outline-container-org607ad19" class="outline-4">
-<h4 id="org607ad19"><span class="section-number-4">2.2.2.</span> 算子注册</h4>
+<div id="outline-container-orgf0b8d01" class="outline-4">
+<h4 id="orgf0b8d01"><span class="section-number-4">2.2.2.</span> 算子注册</h4>
 <div class="outline-text-4" id="text-2-2-2">
 <p>
 PyTorch算子注册方式包括TORCH<sub>LIBRARY</sub> API和RegisterOperators两种，官方更推荐TORCH<sub>LIBRARY</sub> API, 两者最终都通过调用​<code>Dispatcher::registerDef()</code>​和​<code>Dispatcher::registerImpl()</code>​来实现。
@@ -760,8 +760,8 @@ PyTorch算子注册方式包括TORCH<sub>LIBRARY</sub> API和RegisterOperators�
 </div>
 </div>
 </div>
-<div id="outline-container-org292202c" class="outline-3">
-<h3 id="org292202c"><span class="section-number-3">2.3.</span> 运行时链路</h3>
+<div id="outline-container-org109bd3b" class="outline-3">
+<h3 id="org109bd3b"><span class="section-number-3">2.3.</span> 运行时链路</h3>
 <div class="outline-text-3" id="text-2-3">
 <p>
 PyTorch算子在执行时首先会根据算子名和schema等元数据（KernelFunction表行索引）在​<code>Dispatcher::dispatchTable_</code>​查找OperatorHandle, 然后再根据各处DispatchKey来计算DispatchKeySet以最终得到KernelFunction表列索引，最后使用该列索引在OperatorHandle对应的OperatorEntry中找到KernelFunction并调用之。
@@ -773,7 +773,7 @@ PyTorch算子在执行时首先会根据算子名和schema等元数据（KernelF
 接下来本节将以Tensor.add()为例分析Dispatcher运行时链路，其调用栈整体如下图所示：
 </p>
 
-<div id="org4e0e80f" class="figure">
+<div id="org890e2f2" class="figure">
 <p><img src="https://github.com/azjf/azjf.github.io/raw/main/img/71/9C0C82-8BA6-4173-8061-471AA0969F96/2025-07-06_21-46-21_screenshot.png" alt="2025-07-06_21-46-21_screenshot.png" />
 </p>
 </div>
@@ -811,8 +811,8 @@ PyTorch算子在执行时首先会根据算子名和schema等元数据（KernelF
 at::Tensor::add()之间透穿调用到add<sub>Tensor</sub>::call(), 其会先查找add算子对应的OperatorHandle, 然后再执行查找结果call()方法。
 </p>
 </div>
-<div id="outline-container-org3595751" class="outline-4">
-<h4 id="org3595751"><span class="section-number-4">2.3.1.</span> 查找OperatorHandle</h4>
+<div id="outline-container-org7e58ecf" class="outline-4">
+<h4 id="org7e58ecf"><span class="section-number-4">2.3.1.</span> 查找OperatorHandle</h4>
 <div class="outline-text-4" id="text-2-3-1">
 <p>
 create<sub>add</sub><sub>Tensor</sub><sub>typed</sub><sub>handle</sub>()的实现如下：
@@ -862,8 +862,8 @@ findOp()本质上是在根据OperatorName来查前述Dispatcher::operatorLookupT
 </p>
 </div>
 </div>
-<div id="outline-container-org665b4f2" class="outline-4">
-<h4 id="org665b4f2"><span class="section-number-4">2.3.2.</span> 执行OperatorHandle</h4>
+<div id="outline-container-org869906f" class="outline-4">
+<h4 id="org869906f"><span class="section-number-4">2.3.2.</span> 执行OperatorHandle</h4>
 <div class="outline-text-4" id="text-2-3-2">
 <p>
 add<sub>Tensor</sub>::call()在查找到OperatorHandle后，会执行TypedOperatorHandle::call()方法，如下：
@@ -920,8 +920,8 @@ call()首先会计算DispatchKeySet, 然后再根据DispatchKeySet计算出Kerne
 </div>
 </div>
 </div>
-<div id="outline-container-orga74a529" class="outline-4">
-<h4 id="orga74a529"><span class="section-number-4">2.3.3.</span> 计算DispatchKeySet</h4>
+<div id="outline-container-orge16e766" class="outline-4">
+<h4 id="orge16e766"><span class="section-number-4">2.3.3.</span> 计算DispatchKeySet</h4>
 <div class="outline-text-4" id="text-2-3-3">
 <p>
 Dispatcher::call()会使用OperatorEntry::dispatchKeyExtractor<sub>来根据入参tensor</sub>/thread local变量/DispatchKeyExtractor中的算子自定义逻辑来综合计算出DispatchKeySet (实现来multiple-dispatch)，如下：
@@ -997,8 +997,8 @@ computeDispatchKeySet()的计算逻辑如下：
 </div>
 </div>
 </div>
-<div id="outline-container-orga6943d6" class="outline-4">
-<h4 id="orga6943d6"><span class="section-number-4">2.3.4.</span> 查找KernelFunction</h4>
+<div id="outline-container-org61cb07c" class="outline-4">
+<h4 id="org61cb07c"><span class="section-number-4">2.3.4.</span> 查找KernelFunction</h4>
 <div class="outline-text-4" id="text-2-3-4">
 <p>
 在得到DispatchKeySet后，​<code>OperatorEntry::lookup()</code>​先通过​<code>DispatchKeySet::getDispatchTableIndexForDispatchKeySet()</code>​来计算出其对应的KernelFunction表列索引，然后再直接查dispatchTable<sub>数组以获得KernelFunction</sub>, 如下：
@@ -1017,8 +1017,8 @@ computeDispatchKeySet()的计算逻辑如下：
 </div>
 </div>
 </div>
-<div id="outline-container-orgd5e90f4" class="outline-4">
-<h4 id="orgd5e90f4"><span class="section-number-4">2.3.5.</span> 调用KernelFunction</h4>
+<div id="outline-container-org47cc74e" class="outline-4">
+<h4 id="org47cc74e"><span class="section-number-4">2.3.5.</span> 调用KernelFunction</h4>
 <div class="outline-text-4" id="text-2-3-5">
 <p>
 在得到KernelFunction后，Dispatcher将执行KernelFunction::call(), 其逻辑如下：
@@ -1089,8 +1089,8 @@ C10_ALWAYS_INLINE <span style="font-weight: bold; text-decoration: underline;">R
 </p>
 </div>
 </div>
-<div id="outline-container-orge635d9b" class="outline-4">
-<h4 id="orge635d9b"><span class="section-number-4">2.3.6.</span> redispatch</h4>
+<div id="outline-container-orge71b119" class="outline-4">
+<h4 id="orge71b119"><span class="section-number-4">2.3.6.</span> redispatch</h4>
 <div class="outline-text-4" id="text-2-3-6">
 <p>
 ​<code>torch::autograd::unamed::VariableType::add_Tensor()</code>​的实现如下，
@@ -1134,8 +1134,8 @@ C10_ALWAYS_INLINE <span style="font-weight: bold; text-decoration: underline;">R
 </div>
 </div>
 </div>
-<div id="outline-container-org66ec463" class="outline-2">
-<h2 id="org66ec463"><span class="section-number-2">3.</span> 参考文档</h2>
+<div id="outline-container-orgdc80aad" class="outline-2">
+<h2 id="orgdc80aad"><span class="section-number-2">3.</span> 参考文档</h2>
 <div class="outline-text-2" id="text-3">
 <ol class="org-ol">
 <li><a href="https://docs.pytorch.org/tutorials/advanced/dispatcher.html">https://docs.pytorch.org/tutorials/advanced/dispatcher.html</a></li>
